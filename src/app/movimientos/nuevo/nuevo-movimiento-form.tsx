@@ -33,10 +33,7 @@ function useBuscador<T>(fn: (q: string) => Promise<T[]>) {
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    if (!query.trim()) {
-      setResultados([]);
-      return;
-    }
+    if (!query.trim()) return;
     const handle = setTimeout(() => {
       startTransition(async () => {
         setResultados(await fn(query));
@@ -46,7 +43,7 @@ function useBuscador<T>(fn: (q: string) => Promise<T[]>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
-  return { query, setQuery, resultados, pending };
+  return { query, setQuery, resultados: query.trim() ? resultados : [], pending };
 }
 
 export function NuevoMovimientoForm({ disponibilidadInicial }: { disponibilidadInicial: Disponible[] }) {

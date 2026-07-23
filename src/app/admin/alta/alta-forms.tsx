@@ -19,8 +19,8 @@ export function CuentaForm() {
   const [banco, setBanco] = useState("");
   const [letra, setLetra] = useState("");
   const [perfil, setPerfil] = useState("");
-  const [id, setId] = useState("");
-  const [idTocado, setIdTocado] = useState(false);
+  const [idOverride, setIdOverride] = useState<string | null>(null);
+  const id = idOverride ?? (banco && letra && perfil ? `${slugify(banco)}.${letra.toLowerCase()}.${perfil}` : "");
   const [tipoCuenta, setTipoCuenta] = useState<"BASICA" | "SIN_LIMITE" | "MEJORADA">("BASICA");
   const [saldoInicial, setSaldoInicial] = useState("0");
   const [clabe, setClabe] = useState("");
@@ -37,19 +37,11 @@ export function CuentaForm() {
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (idTocado) return;
-    if (banco && letra && perfil) {
-      setId(`${slugify(banco)}.${letra.toLowerCase()}.${perfil}`);
-    }
-  }, [banco, letra, perfil, idTocado]);
-
   function limpiar() {
     setBanco("");
     setLetra("");
     setPerfil("");
-    setId("");
-    setIdTocado(false);
+    setIdOverride(null);
     setSaldoInicial("0");
     setClabe("");
     setUsuario("");
@@ -117,10 +109,7 @@ export function CuentaForm() {
         <input
           className={inputClass}
           value={id}
-          onChange={(e) => {
-            setId(e.target.value);
-            setIdTocado(true);
-          }}
+          onChange={(e) => setIdOverride(e.target.value)}
         />
       </label>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -203,31 +192,28 @@ export function CasinoForm() {
   const [noCasino, setNoCasino] = useState("1");
   const [letra, setLetra] = useState("");
   const [perfil, setPerfil] = useState("");
-  const [id, setId] = useState("");
-  const [idTocado, setIdTocado] = useState(false);
+  const [idOverride, setIdOverride] = useState<string | null>(null);
+  const id = idOverride ?? (nombreCasino && letra && perfil ? `${slugify(nombreCasino)}.${letra.toLowerCase()}.${perfil}` : "");
   const [saldoInicial, setSaldoInicial] = useState("0");
   const [statusPerfil, setStatusPerfil] = useState<"VERIFICADO" | "EN_PROCESO" | "SIN_VERIFICACION">("SIN_VERIFICACION");
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [cobraEnId, setCobraEnId] = useState("");
-  const [cuentasLetra, setCuentasLetra] = useState<{ id: string; banco: string; perfil: string }[]>([]);
+  const [cuentasLetraFetched, setCuentasLetraFetched] = useState<{ id: string; banco: string; perfil: string }[]>([]);
+  const cuentasLetra = letra.trim() ? cuentasLetraFetched : [];
   const [nota, setNota] = useState("");
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    if (idTocado) return;
-    if (nombreCasino && letra && perfil) {
-      setId(`${slugify(nombreCasino)}.${letra.toLowerCase()}.${perfil}`);
-    }
-  }, [nombreCasino, letra, perfil, idTocado]);
-
-  useEffect(() => {
-    if (!letra.trim()) {
-      setCuentasLetra([]);
-      return;
-    }
-    buscarCuentasParaCobraEn(letra).then(setCuentasLetra);
+    if (!letra.trim()) return;
+    let cancelado = false;
+    buscarCuentasParaCobraEn(letra).then((data) => {
+      if (!cancelado) setCuentasLetraFetched(data);
+    });
+    return () => {
+      cancelado = true;
+    };
   }, [letra]);
 
   function limpiar() {
@@ -235,8 +221,7 @@ export function CasinoForm() {
     setNoCasino("1");
     setLetra("");
     setPerfil("");
-    setId("");
-    setIdTocado(false);
+    setIdOverride(null);
     setSaldoInicial("0");
     setUsuario("");
     setContrasena("");
@@ -295,10 +280,7 @@ export function CasinoForm() {
         <input
           className={inputClass}
           value={id}
-          onChange={(e) => {
-            setId(e.target.value);
-            setIdTocado(true);
-          }}
+          onChange={(e) => setIdOverride(e.target.value)}
         />
       </label>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
