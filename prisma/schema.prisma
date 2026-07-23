@@ -1,0 +1,256 @@
+// Prisma schema — Sistema de Control Bancario y Casino
+// Ver ESPECIFICACION_APP_CONTROL_BANCARIO.md secciones 2, 3 y 4.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth / roles
+// ---------------------------------------------------------------------------
+
+enum Rol {
+  ADMIN
+  OPERADOR
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  nombre    String
+  rol       Rol
+  // Letra asignada al operador (A, B, C...). Null para ADMIN (ve todas).
+  letra     String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("usuarios")
+}
+
+// ---------------------------------------------------------------------------
+// 2.1 Cuentas (bancarias)
+// ---------------------------------------------------------------------------
+
+enum StatusCuenta {
+  POR_VERIFICAR
+  ACTIVA
+  BLOQUEADA
+  BAJA
+  SIN_ACCESO
+}
+
+enum TipoCuenta {
+  BASICA
+  SIN_LIMITE
+  MEJORADA
+}
+
+model Cuenta {
+  /// formato `banco.letra.perfil`, ej `sant.a.101`
+  id         String       @id
+  status     StatusCuenta @default(POR_VERIFICAR)
+  tipoCuenta TipoCuenta   @map("tipo_cuenta")
+  letra      String
+  perfil     String
+  banco      String
+
+  saldoInicial Decimal @map("saldo_inicial") @db.Decimal(14, 2)
+
+  clabe           String?
+  usuario         String?
+  contrasena      String?
+  nuevaContrasena String? @map("nueva_contrasena")
+  token           String?
+  nip             String?
+
+  nCuenta      String? @map("n_cuenta")
+  nCliente     String? @map("n_cliente")
+  nombrePerfil String? @map("nombre_perfil")
+
+  // Datos de tarjeta asociada (ver también pantalla 5.7 Tarjetas)
+  nTarjeta          String? @map("n_tarjeta")
+  exp               String?
+  cvv               String?
+  ubicacionCustodia String? @map("ubicacion_custodia")
+
+  observaciones String?
+  prestadaA     String? @map("prestada_a")
+
+  idCliente     String? @map("id_cliente")
+  nombreCliente String? @map("nombre_cliente")
+  clienteActivo Boolean @default(false) @map("cliente_activo")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  movimientos       Movimiento[]
+  casinosCobranAqui Casino[]     @relation("CasinoCobraEnCuenta")
+
+  @@index([letra])
+  @@index([status])
+  @@map("cuentas")
+}
+
+// ---------------------------------------------------------------------------
+// 2.2 Casinos
+// ---------------------------------------------------------------------------
+
+enum StatusCasino {
+  ACTIVO
+  BLOQUEADO
+  ALERTA
+}
+
+enum StatusPerfil {
+  VERIFICADO
+  EN_PROCESO
+  SIN_VERIFICACION
+}
+
+model Casino {
+  /// formato `casino.letra.perfil`, ej `code.a.101`
+  id           String @id
+  noCasino     Int    @map("no_casino")
+  nombreCasino String @map("nombre_casino")
+  letra        String
+  perfil       String
+
+  saldoInicial Decimal @map("saldo_inicial") @db.Decimal(14, 2)
+
+  statusCasino StatusCasino @map("status_casino")
+  statusPerfil StatusPerfil @map("status_perfil")
+
+  usuario    String?
+  contrasena String?
+
+  /// cuenta bancaria donde se retira ese casino
+  cobraEnId String?
+  cobraEn   Cuenta? @relation("CasinoCobraEnCuenta", fields: [cobraEnId], references: [id])
+
+  nota String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  apuestas Apuesta[]
+
+  @@index([letra])
+  @@index([statusCasino])
+  @@map("casinos")
+}
+
+// ---------------------------------------------------------------------------
+// 2.3 Movimientos (bancarios)
+// ---------------------------------------------------------------------------
+
+enum TipoMovimiento {
+  DEPOSITO_A_CASINO
+  RETIRO_DE_CASINO
+  PRESTAMO_ENTRE_CUENTAS
+  GASTO_OPERATIVO
+}
+
+/// Dirección contable del movimiento respecto a `cuenta_id`.
+enum DireccionMovimiento {
+  RETIRO
+  DEPOSITO
+}
+
+enum EstadoMovimiento {
+  CONFIRMADO
+  PENDIENTE
+  CANCELADO
+}
+
+model Movimiento {
+  id             Int            @id @default(autoincrement())
+  fecha          DateTime       @default(now())
+  tipoMovimiento TipoMovimiento @map("tipo_movimiento")
+
+  cuentaId String
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id])
+
+  tipo  DireccionMovimiento
+  monto Decimal             @db.Decimal(14, 2)
+
+  estado EstadoMovimiento @default(CONFIRMADO)
+
+  /// ID de casino o de otra cuenta (lado contrario del movimiento).
+  /// Referencia polimórfica intencional (Casino.id o Cuenta.id) — no es FK de Prisma.
+  casinoUOrigen String? @map("casino_u_origen")
+
+  concepto      String?
+  referencia    String?
+  notas         String?
+  registradoPor String  @map("registrado_por")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([cuentaId])
+  @@index([casinoUOrigen])
+  @@index([tipoMovimiento])
+  @@index([fecha])
+  @@map("movimientos")
+}
+
+// ---------------------------------------------------------------------------
+// 2.4 Apuestas
+// ---------------------------------------------------------------------------
+
+enum Mercado {
+  LOCAL
+  EMPATE
+  VISITANTE
+}
+
+enum StatusApuesta {
+  EN_JUEGO
+  GANADA
+  PERDIDA
+}
+
+model Apuesta {
+  id     Int      @id @default(autoincrement())
+  fecha  DateTime @default(now())
+  letra  String
+  perfil String
+
+  casinoId String
+  casino   Casino @relation(fields: [casinoId], references: [id])
+
+  noApuesta   String? @map("no_apuesta")
+  evento      String
+  mercado     Mercado
+  descripcion String?
+  momio       Decimal @db.Decimal(8, 3)
+
+  saldoReal Decimal @map("saldo_real") @db.Decimal(14, 2)
+  bono      Decimal @default(0) @db.Decimal(14, 2)
+
+  /// = momio × (saldo_real + bono)
+  posibleGanancia Decimal @map("posible_ganancia") @db.Decimal(14, 2)
+
+  statusApuesta StatusApuesta @default(EN_JUEGO) @map("status_apuesta")
+
+  /// monto real que se acredita cuando se marca Ganada
+  resultadoGanancia Decimal? @map("resultado_ganancia") @db.Decimal(14, 2)
+
+  /// si este registro es la ganancia generada al cerrar una apuesta, referencia a la apuesta original
+  apuestaRelacionadaId  Int?      @map("apuesta_relacionada_id")
+  apuestaRelacionada    Apuesta?  @relation("ApuestaGanancia", fields: [apuestaRelacionadaId], references: [id])
+  gananciasRelacionadas Apuesta[] @relation("ApuestaGanancia")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([casinoId])
+  @@index([letra])
+  @@index([statusApuesta])
+  @@map("apuestas")
+}
