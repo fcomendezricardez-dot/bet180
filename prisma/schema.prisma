@@ -56,7 +56,8 @@ model Cuenta {
   /// formato `banco.letra.perfil`, ej `sant.a.101`
   id         String       @id
   status     StatusCuenta @default(POR_VERIFICAR)
-  tipoCuenta TipoCuenta   @map("tipo_cuenta")
+  /// Null = pendiente de definir (aún no se confirma con el cliente/banco).
+  tipoCuenta TipoCuenta?  @map("tipo_cuenta")
   letra      String
   perfil     String
   banco      String

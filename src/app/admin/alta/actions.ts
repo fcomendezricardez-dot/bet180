@@ -16,7 +16,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 
 export async function accionCrearCuenta(input: {
   id: string;
-  tipoCuenta: "BASICA" | "SIN_LIMITE" | "MEJORADA";
+  tipoCuenta?: "BASICA" | "SIN_LIMITE" | "MEJORADA";
   letra: string;
   perfil: string;
   banco: string;

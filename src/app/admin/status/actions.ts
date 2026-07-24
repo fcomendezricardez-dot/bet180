@@ -15,7 +15,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 export async function accionActualizarStatus(
   cuentaId: string,
   status: "POR_VERIFICAR" | "ACTIVA" | "BLOQUEADA" | "BAJA" | "SIN_ACCESO",
-  tipoCuenta: "BASICA" | "SIN_LIMITE" | "MEJORADA",
+  tipoCuenta: "BASICA" | "SIN_LIMITE" | "MEJORADA" | null,
 ): Promise<ActionResult> {
   try {
     const actor = await actorOrThrow();

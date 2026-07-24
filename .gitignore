@@ -47,3 +47,7 @@ next-env.d.ts
 /.agents/
 /.windsurf/
 /skills-lock.json
+
+# datos reales de migración (contienen credenciales de cuentas) — nunca versionar
+/scripts/*.xlsx
+/scripts/*.json

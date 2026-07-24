@@ -21,7 +21,7 @@ export function CuentaForm() {
   const [perfil, setPerfil] = useState("");
   const [idOverride, setIdOverride] = useState<string | null>(null);
   const id = idOverride ?? (banco && letra && perfil ? `${slugify(banco)}.${letra.toLowerCase()}.${perfil}` : "");
-  const [tipoCuenta, setTipoCuenta] = useState<"BASICA" | "SIN_LIMITE" | "MEJORADA">("BASICA");
+  const [tipoCuenta, setTipoCuenta] = useState<"" | "BASICA" | "SIN_LIMITE" | "MEJORADA">("BASICA");
   const [saldoInicial, setSaldoInicial] = useState("0");
   const [clabe, setClabe] = useState("");
   const [usuario, setUsuario] = useState("");
@@ -61,7 +61,7 @@ export function CuentaForm() {
     startTransition(async () => {
       const result = await accionCrearCuenta({
         id,
-        tipoCuenta,
+        tipoCuenta: tipoCuenta || undefined,
         letra,
         perfil,
         banco,
@@ -116,6 +116,7 @@ export function CuentaForm() {
         <label className={labelClass}>
           Tipo de cuenta
           <select className={inputClass} value={tipoCuenta} onChange={(e) => setTipoCuenta(e.target.value as typeof tipoCuenta)}>
+            <option value="">Sin definir</option>
             <option value="BASICA">Básica</option>
             <option value="SIN_LIMITE">Sin límite</option>
             <option value="MEJORADA">Mejorada</option>

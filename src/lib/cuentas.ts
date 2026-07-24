@@ -22,7 +22,7 @@ export async function getCuenta(actor: Actor, id: string) {
 
 const CrearCuentaSchema = z.object({
   id: z.string().min(1),
-  tipoCuenta: z.enum(["BASICA", "SIN_LIMITE", "MEJORADA"]),
+  tipoCuenta: z.enum(["BASICA", "SIN_LIMITE", "MEJORADA"]).nullable().optional(),
   letra: z.string().min(1),
   perfil: z.string().min(1),
   banco: z.string().min(1),

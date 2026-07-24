@@ -9,21 +9,23 @@ type Fila = {
   perfil: string;
   banco: string;
   status: "POR_VERIFICAR" | "ACTIVA" | "BLOQUEADA" | "BAJA" | "SIN_ACCESO";
-  tipoCuenta: "BASICA" | "SIN_LIMITE" | "MEJORADA";
+  tipoCuenta: "BASICA" | "SIN_LIMITE" | "MEJORADA" | null;
 };
 
 function FilaEditable({ fila }: { fila: Fila }) {
   const [status, setStatus] = useState(fila.status);
-  const [tipoCuenta, setTipoCuenta] = useState(fila.tipoCuenta);
+  const [tipoCuenta, setTipoCuenta] = useState<"BASICA" | "SIN_LIMITE" | "MEJORADA" | "">(
+    fila.tipoCuenta ?? "",
+  );
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const cambiado = status !== fila.status || tipoCuenta !== fila.tipoCuenta;
+  const cambiado = status !== fila.status || tipoCuenta !== (fila.tipoCuenta ?? "");
 
   function guardar() {
     setMensaje(null);
     startTransition(async () => {
-      const result = await accionActualizarStatus(fila.id, status, tipoCuenta);
+      const result = await accionActualizarStatus(fila.id, status, tipoCuenta || null);
       setMensaje(result.ok ? "Guardado." : `Error: ${result.error}`);
     });
   }
@@ -51,8 +53,9 @@ function FilaEditable({ fila }: { fila: Fila }) {
         <select
           className="rounded border border-slate-300 px-2 py-1 text-sm"
           value={tipoCuenta}
-          onChange={(e) => setTipoCuenta(e.target.value as Fila["tipoCuenta"])}
+          onChange={(e) => setTipoCuenta(e.target.value as "BASICA" | "SIN_LIMITE" | "MEJORADA" | "")}
         >
+          <option value="">Sin definir</option>
           <option value="BASICA">Básica</option>
           <option value="SIN_LIMITE">Sin límite</option>
           <option value="MEJORADA">Mejorada</option>
