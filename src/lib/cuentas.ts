@@ -40,6 +40,9 @@ const CrearCuentaSchema = z.object({
   cvv: z.string().optional(),
   ubicacionCustodia: z.string().optional(),
   observaciones: z.string().optional(),
+  idCliente: z.string().optional(),
+  nombreCliente: z.string().optional(),
+  clienteActivo: z.boolean().optional(),
 });
 
 /** Alta de cuenta nueva (solo ADMIN, cualquier letra). */

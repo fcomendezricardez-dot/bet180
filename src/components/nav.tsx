@@ -9,11 +9,11 @@ const OPERATOR_LINKS = [
 ];
 
 const ADMIN_LINKS = [
-  { href: "/admin/alta", label: "Alta Cuenta/Casino" },
+  { href: "/admin/alta", label: "Gestión (Alta/Edición)" },
   { href: "/admin/status", label: "Editar Status" },
   { href: "/admin/reportes", label: "Reportes" },
   { href: "/admin/tarjetas", label: "Tarjetas" },
-  { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/clientes", label: "Buscador Clientes" },
 ];
 
 export async function Nav() {

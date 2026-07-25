@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { type Actor, assertAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { calcularSaldoCasino, calcularSaldoCuenta } from "@/lib/saldos";
@@ -55,4 +56,83 @@ function parsearEquipo(equipo: string | null): { letra: string; perfil: string }
   const partes = equipo.split("-");
   if (partes.length !== 2) return null;
   return { letra: partes[0].toUpperCase(), perfil: partes[1] };
+}
+
+/** Ficha de un cliente para editar sus datos (sin cuentas/casinos). Solo ADMIN. */
+export async function getClienteParaEditar(actor: Actor, id: string) {
+  assertAdmin(actor);
+  return prisma.cliente.findUniqueOrThrow({ where: { id } });
+}
+
+async function siguienteIdCliente() {
+  const ultimo = await prisma.cliente.findFirst({
+    select: { id: true },
+    orderBy: { id: "desc" },
+  });
+  const n = ultimo ? parseInt(ultimo.id.replace(/^CL/i, ""), 10) || 0 : 0;
+  return `CL${String(n + 1).padStart(4, "0")}`;
+}
+
+const ClienteSchema = z.object({
+  status: z.string().optional(),
+  nombreCompleto: z.string().min(1),
+  direccionIne: z.string().optional(),
+  ciudad: z.string().optional(),
+  estado: z.string().optional(),
+  cp: z.string().optional(),
+  curp: z.string().optional(),
+  rfc: z.string().optional(),
+  fechaNacimiento: z.string().optional(),
+  expIne: z.number().int().optional(),
+  idmx: z.string().optional(),
+  noIne: z.string().optional(),
+  telefono: z.string().optional(),
+  whatsapp: z.string().optional(),
+  nombreReferencia: z.string().optional(),
+  noReferencia: z.string().optional(),
+  ingresoPor: z.string().optional(),
+  /// letra-perfil, ej "a-101": conecta al cliente con sus casinos (por letra+perfil) y sirve de referencia visual del equipo
+  equipo: z.string().optional(),
+  opera: z.string().optional(),
+  correoOperativo: z.string().optional(),
+  contrasenaOperativa: z.string().optional(),
+  noLinea: z.string().optional(),
+  telefonia: z.string().optional(),
+  validacion: z.string().optional(),
+  ultRecarga: z.string().optional(),
+  apertura: z.string().optional(),
+  fechaRegistro: z.string().optional(),
+  nota: z.string().optional(),
+});
+
+function fechasADate<T extends { fechaNacimiento?: string; ultRecarga?: string; fechaRegistro?: string }>(
+  data: T,
+) {
+  return {
+    ...data,
+    fechaNacimiento: data.fechaNacimiento ? new Date(data.fechaNacimiento) : undefined,
+    ultRecarga: data.ultRecarga ? new Date(data.ultRecarga) : undefined,
+    fechaRegistro: data.fechaRegistro ? new Date(data.fechaRegistro) : undefined,
+  };
+}
+
+/** Alta de un cliente nuevo: genera el ID CLxxxx automáticamente. Solo ADMIN. */
+export async function crearCliente(actor: Actor, input: z.infer<typeof ClienteSchema>) {
+  assertAdmin(actor);
+  const data = ClienteSchema.parse(input);
+  const id = await siguienteIdCliente();
+  return prisma.cliente.create({ data: { id, ...fechasADate(data) } });
+}
+
+const ActualizarClienteSchema = ClienteSchema.partial();
+
+/** Editar un cliente existente. Solo ADMIN. */
+export async function actualizarCliente(
+  actor: Actor,
+  id: string,
+  input: z.infer<typeof ActualizarClienteSchema>,
+) {
+  assertAdmin(actor);
+  const data = ActualizarClienteSchema.parse(input);
+  return prisma.cliente.update({ where: { id }, data: fechasADate(data) });
 }
