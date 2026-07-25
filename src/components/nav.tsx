@@ -4,6 +4,7 @@ import { auth, signOut } from "@/auth";
 const OPERATOR_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/movimientos/nuevo", label: "Nuevo Movimiento" },
+  { href: "/apuestas", label: "Apuestas Colocadas" },
   { href: "/apuestas/cerrar", label: "Cerrar Apuesta" },
 ];
 

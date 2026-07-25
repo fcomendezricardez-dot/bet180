@@ -112,7 +112,10 @@ export async function listApuestas(actor: Actor, opts?: { letra?: string; status
 
   return prisma.apuesta.findMany({
     where: { letra, statusApuesta: opts?.statusApuesta },
-    include: { casino: { select: { nombreCasino: true, letra: true, perfil: true } } },
+    include: {
+      casino: { select: { nombreCasino: true, letra: true, perfil: true } },
+      gananciasRelacionadas: { select: { resultadoGanancia: true } },
+    },
     orderBy: { fecha: "desc" },
   });
 }
