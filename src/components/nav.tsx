@@ -12,6 +12,7 @@ const ADMIN_LINKS = [
   { href: "/admin/status", label: "Editar Status" },
   { href: "/admin/reportes", label: "Reportes" },
   { href: "/admin/tarjetas", label: "Tarjetas" },
+  { href: "/admin/clientes", label: "Clientes" },
 ];
 
 export async function Nav() {

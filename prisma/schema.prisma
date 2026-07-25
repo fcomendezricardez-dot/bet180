@@ -84,9 +84,10 @@ model Cuenta {
   observaciones String?
   prestadaA     String? @map("prestada_a")
 
-  idCliente     String? @map("id_cliente")
-  nombreCliente String? @map("nombre_cliente")
-  clienteActivo Boolean @default(false) @map("cliente_activo")
+  idCliente     String?  @map("id_cliente")
+  nombreCliente String?  @map("nombre_cliente")
+  clienteActivo Boolean  @default(false) @map("cliente_activo")
+  cliente       Cliente? @relation(fields: [idCliente], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -96,7 +97,61 @@ model Cuenta {
 
   @@index([letra])
   @@index([status])
+  @@index([idCliente])
   @@map("cuentas")
+}
+
+// ---------------------------------------------------------------------------
+// Clientes (catálogo real: identidad + datos operativos)
+// ---------------------------------------------------------------------------
+
+model Cliente {
+  /// formato CL0001
+  id             String  @id
+  status         String?
+  nombreCompleto String  @map("nombre_completo")
+
+  // Datos personales / identidad
+  direccionIne    String?   @map("direccion_ine")
+  ciudad          String?
+  estado          String?
+  cp              String?
+  curp            String?
+  rfc             String?
+  fechaNacimiento DateTime? @map("fecha_nacimiento")
+  expIne          Int?      @map("exp_ine")
+  idmx            String?
+  noIne           String?   @map("no_ine")
+
+  // Contacto
+  telefono         String?
+  whatsapp         String?
+  nombreReferencia String? @map("nombre_referencia")
+  noReferencia     String? @map("no_referencia")
+  ingresoPor       String? @map("ingreso_por")
+
+  // Datos operativos
+  /// letra.perfil asignado, ej "a-101"
+  equipo              String?
+  /// operador asignado (nombre/alias)
+  opera               String?
+  correoOperativo     String?   @map("correo_operativo")
+  contrasenaOperativa String?   @map("contrasena_operativa")
+  noLinea             String?   @map("no_linea")
+  telefonia           String?
+  validacion          String?
+  ultRecarga          DateTime? @map("ult_recarga")
+  apertura            String?
+  fechaRegistro       DateTime? @map("fecha_registro")
+  nota                String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cuentas Cuenta[]
+
+  @@index([nombreCompleto])
+  @@map("clientes")
 }
 
 // ---------------------------------------------------------------------------

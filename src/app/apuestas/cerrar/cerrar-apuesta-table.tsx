@@ -9,7 +9,9 @@ type Fila = {
   letra: string;
   perfil: string;
   casino: string;
+  noApuesta: string | null;
   evento: string;
+  descripcion: string | null;
   mercado: string;
   momio: number;
   saldoReal: number;
@@ -18,6 +20,8 @@ type Fila = {
 };
 
 const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
+const fechaHora = (iso: string) =>
+  new Intl.DateTimeFormat("es-MX", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
 
 export function CerrarApuestaTable({ apuestas }: { apuestas: Fila[] }) {
   const [filas, setFilas] = useState(apuestas);
@@ -68,12 +72,16 @@ export function CerrarApuestaTable({ apuestas }: { apuestas: Fila[] }) {
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-slate-500">
             <tr>
+              <th className="px-3 py-2">Fecha</th>
               <th className="px-3 py-2">Perfil</th>
               <th className="px-3 py-2">Casino</th>
+              <th className="px-3 py-2">No. apuesta</th>
               <th className="px-3 py-2">Evento</th>
+              <th className="px-3 py-2">Descripción</th>
               <th className="px-3 py-2">Mercado</th>
               <th className="px-3 py-2">Momio</th>
-              <th className="px-3 py-2">Apostado</th>
+              <th className="px-3 py-2">Efectivo</th>
+              <th className="px-3 py-2">Bono</th>
               <th className="px-3 py-2">Posible Ganancia</th>
               <th className="px-3 py-2" />
             </tr>
@@ -81,14 +89,18 @@ export function CerrarApuestaTable({ apuestas }: { apuestas: Fila[] }) {
           <tbody className="divide-y divide-slate-100">
             {filas.map((f) => (
               <tr key={f.id}>
+                <td className="px-3 py-2 whitespace-nowrap text-xs text-slate-500">{fechaHora(f.fecha)}</td>
                 <td className="px-3 py-2">
                   {f.letra}.{f.perfil}
                 </td>
                 <td className="px-3 py-2">{f.casino}</td>
+                <td className="px-3 py-2">{f.noApuesta ?? "—"}</td>
                 <td className="px-3 py-2">{f.evento}</td>
+                <td className="px-3 py-2">{f.descripcion ?? "—"}</td>
                 <td className="px-3 py-2">{f.mercado}</td>
                 <td className="px-3 py-2">{f.momio}</td>
-                <td className="px-3 py-2">{money(f.saldoReal + f.bono)}</td>
+                <td className="px-3 py-2">{money(f.saldoReal)}</td>
+                <td className="px-3 py-2">{money(f.bono)}</td>
                 <td className="px-3 py-2">{money(f.posibleGanancia)}</td>
                 <td className="px-3 py-2">
                   {gananciaAbierta === f.id ? (
