@@ -375,6 +375,12 @@ model ReglaBono {
 
   /// si se define, el bono = monto depositado × este multiplicador (ej. 2 = el doble), en vez de buscar en la tabla de tiers
   multiplicador Decimal? @db.Decimal(6, 3)
+  /// depósito mínimo para calificar cuando se usa `multiplicador` (los tiers ya definen su propio mínimo por rango)
+  depositoMinimo Decimal? @map("deposito_minimo") @db.Decimal(14, 2)
+  /// tope máximo del bono otorgado cuando se usa `multiplicador` (ej. hasta $8,600)
+  bonoMaximo Decimal? @map("bono_maximo") @db.Decimal(14, 2)
+  /// veces que hay que jugar (depósito + bono) antes de poder retirar (ej. 3 = rollover 3X). Solo referencia, no se rastrea automáticamente.
+  rolloverMultiplicador Decimal? @map("rollover_multiplicador") @db.Decimal(6, 3)
 
   activo Boolean @default(true)
   notas  String?

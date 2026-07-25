@@ -19,13 +19,17 @@ type ReglaConfig = {
   momioMinimo?: number;
   montoMinimo?: number;
   multiplicador?: number;
+  depositoMinimo?: number;
+  bonoMaximo?: number;
+  rolloverMultiplicador?: number;
   notas?: string;
   tiers?: TierConfig[];
 };
 
 const MARCAS: { nombreCasino: string; reglas: ReglaConfig[] }[] = [
   {
-    nombreCasino: "Codere",
+    // en tu catálogo puede aparecer completo ("Codere") o abreviado ("Code"); ambos hacen match con "Cod"
+    nombreCasino: "Cod",
     reglas: [
       {
         nombre: "Bono de primer depósito del mes",
@@ -61,14 +65,103 @@ const MARCAS: { nombreCasino: string; reglas: ReglaConfig[] }[] = [
       },
     ],
   },
+  {
+    // igual: "Betc" hace match con "Betc" (abreviado) o "Betcris" (completo)
+    nombreCasino: "Betc",
+    reglas: [
+      {
+        nombre: "Bienvenida 200% (JUEGATRIPLEMX)",
+        tipo: "BIENVENIDA",
+        multiplicador: 2,
+        depositoMinimo: 200,
+        bonoMaximo: 8600,
+        rolloverMultiplicador: 7,
+        notas:
+          "Vigente jun-dic 2026. Solo primer depósito, seleccionando JUEGATRIPLEMX en el cajero. Bono exclusivo " +
+          "para apuestas deportivas. Además otorga 20 Free Spins en 'Football Super Spins' tras apostar mínimo $5 " +
+          "en dinero real en los juegos de Casino participantes (vigencia de los free spins: 3 días).",
+      },
+      {
+        nombre: "Recarga 15% miércoles (RECARGA15MX)",
+        tipo: "CADA_N_DIAS",
+        cadaDias: 7,
+        multiplicador: 0.15,
+        depositoMinimo: 200,
+        bonoMaximo: 10000,
+        rolloverMultiplicador: 3,
+        notas:
+          "Solo aplica para recargas (no primer depósito), y solo los miércoles, seleccionando RECARGA15 en el " +
+          "cajero. Exclusivo apuestas deportivas (no Casino ni Caballos). Vigente hasta dic 2026.",
+      },
+      {
+        nombre: "Recarga 100% semanal (DOBLE100)",
+        tipo: "CADA_N_DIAS",
+        cadaDias: 7,
+        multiplicador: 1,
+        depositoMinimo: 600,
+        bonoMaximo: 10000,
+        rolloverMultiplicador: 12,
+        notas:
+          "Solo recargas, una vez por semana, seleccionando DOBLE100 en el cajero. Exclusivo apuestas deportivas. " +
+          "Vigente hasta dic 2026.",
+      },
+      {
+        nombre: "Activa y Gana (verificación de cuenta)",
+        tipo: "BIENVENIDA",
+        momioMinimo: 1.5,
+        rolloverMultiplicador: 15,
+        notas:
+          "Free play fijo de $200 tras primer depósito de $200+ y verificación de cuenta (KYC) con Atención a " +
+          "Clientes. Se acredita hasta 12 hrs después de validar. Vigencia de uso: 5 días. No aplica Casino ni Caballos.",
+        tiers: [{ depositoMin: 200, bonoMonto: 200 }],
+      },
+    ],
+  },
+  {
+    // en tu catálogo aparece como "Sporti" (abreviado) o "Sportium"; "Sporti" hace match con ambos
+    nombreCasino: "Sporti",
+    reglas: [
+      {
+        nombre: "Bienvenida 100% hasta $3,500",
+        tipo: "BIENVENIDA",
+        multiplicador: 1,
+        depositoMinimo: 100,
+        bonoMaximo: 3500,
+        rolloverMultiplicador: 3,
+        momioMinimo: 2.0,
+        notas:
+          "Apuesta gratis por el monto del depósito (tope $3,500), se acredita al jugar 3 veces el depósito real " +
+          "dentro de 15 días, momio mínimo +100 (2.00). La apuesta gratis caduca a los 7 días de acreditada. No " +
+          "participan momios mejorados. Un bono por cliente nuevo.",
+      },
+    ],
+  },
+  {
+    // Solo la parte del bono ligado a depósito; falta el detalle completo de
+    // T&C (rollover, momio mínimo, vigencia) para configurarlo con precisión.
+    // "Cali" hace match con "Cali" (abreviado) o "Caliente" (completo)
+    nombreCasino: "Cali",
+    reglas: [
+      {
+        nombre: "Duplican tu primer depósito (hasta $7,000)",
+        tipo: "BIENVENIDA",
+        multiplicador: 2,
+        bonoMaximo: 7000,
+        notas:
+          "PENDIENTE confirmar: depósito mínimo, momio mínimo y rollover exactos (no estaban en el anuncio). " +
+          "Además hay un regalo de $1,000 sin depósito que no aplica a este modelo (no requiere depositar).",
+      },
+    ],
+  },
 ];
 
 async function main() {
   for (const marca of MARCAS) {
     const casinos = await prisma.casino.findMany({
-      where: { nombreCasino: { equals: marca.nombreCasino, mode: "insensitive" } },
+      where: { nombreCasino: { contains: marca.nombreCasino, mode: "insensitive" } },
     });
-    console.log(`${marca.nombreCasino}: ${casinos.length} cuenta(s) encontrada(s).`);
+    const nombresDistintos = [...new Set(casinos.map((c) => c.nombreCasino))];
+    console.log(`${marca.nombreCasino}: ${casinos.length} cuenta(s) encontrada(s). Nombres: ${nombresDistintos.join(", ") || "ninguno"}`);
 
     for (const casino of casinos) {
       for (const regla of marca.reglas) {
@@ -90,6 +183,9 @@ async function main() {
             momioMinimo: regla.momioMinimo,
             montoMinimo: regla.montoMinimo,
             multiplicador: regla.multiplicador,
+            depositoMinimo: regla.depositoMinimo,
+            bonoMaximo: regla.bonoMaximo,
+            rolloverMultiplicador: regla.rolloverMultiplicador,
             notas: regla.notas,
             tiers: regla.tiers ? { create: regla.tiers } : undefined,
           },

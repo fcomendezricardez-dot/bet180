@@ -38,6 +38,9 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
   const [momioMinimo, setMomioMinimo] = useState("");
   const [montoMinimo, setMontoMinimo] = useState("");
   const [multiplicador, setMultiplicador] = useState("");
+  const [depositoMinimo, setDepositoMinimo] = useState("");
+  const [bonoMaximo, setBonoMaximo] = useState("");
+  const [rolloverMultiplicador, setRolloverMultiplicador] = useState("");
   const [activo, setActivo] = useState(true);
   const [notas, setNotas] = useState("");
   const [tiers, setTiers] = useState<Tier[]>([tierVacio()]);
@@ -60,6 +63,9 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
     setMomioMinimo("");
     setMontoMinimo("");
     setMultiplicador("");
+    setDepositoMinimo("");
+    setBonoMaximo("");
+    setRolloverMultiplicador("");
     setActivo(true);
     setNotas("");
     setTiers([tierVacio()]);
@@ -75,6 +81,9 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
     setMomioMinimo(r.momioMinimo?.toString() ?? "");
     setMontoMinimo(r.montoMinimo?.toString() ?? "");
     setMultiplicador(r.multiplicador?.toString() ?? "");
+    setDepositoMinimo(r.depositoMinimo?.toString() ?? "");
+    setBonoMaximo(r.bonoMaximo?.toString() ?? "");
+    setRolloverMultiplicador(r.rolloverMultiplicador?.toString() ?? "");
     setActivo(r.activo);
     setNotas(r.notas ?? "");
     setTiers(
@@ -120,6 +129,9 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
       momioMinimo: tipo === "BIENVENIDA" && momioMinimo ? parseFloat(momioMinimo) : undefined,
       montoMinimo: tipo === "BIENVENIDA" && montoMinimo ? parseFloat(montoMinimo) : undefined,
       multiplicador: multiplicador ? parseFloat(multiplicador) : undefined,
+      depositoMinimo: depositoMinimo ? parseFloat(depositoMinimo) : undefined,
+      bonoMaximo: bonoMaximo ? parseFloat(bonoMaximo) : undefined,
+      rolloverMultiplicador: rolloverMultiplicador ? parseFloat(rolloverMultiplicador) : undefined,
       activo,
       notas: notas || undefined,
       tiers: tiersLimpios,
@@ -169,7 +181,11 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
                 </div>
               </div>
               {r.multiplicador ? (
-                <p className="mt-1 text-xs text-slate-500">Bono = depósito × {r.multiplicador}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Bono = depósito × {r.multiplicador}
+                  {r.bonoMaximo ? ` (tope ${money(r.bonoMaximo)})` : ""}
+                  {r.depositoMinimo ? ` · depósito mínimo ${money(r.depositoMinimo)}` : ""}
+                </p>
               ) : (
                 r.tiers.length > 0 && (
                   <ul className="mt-1 text-xs text-slate-500">
@@ -181,6 +197,9 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
                     ))}
                   </ul>
                 )
+              )}
+              {r.rolloverMultiplicador && (
+                <p className="mt-1 text-xs text-amber-700">Rollover {r.rolloverMultiplicador}X (depósito + bono)</p>
               )}
             </div>
           ))}
@@ -238,6 +257,22 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
               Multiplicador (ej. 2 = el doble del depósito)
               <p className="mt-0.5 text-xs font-normal text-slate-400">Si lo llenas, ignora la tabla de tiers de abajo.</p>
               <input type="number" step="0.01" className={inputClass} value={multiplicador} onChange={(e) => setMultiplicador(e.target.value)} />
+            </label>
+            {multiplicador && (
+              <>
+                <label className={labelClass}>
+                  Depósito mínimo
+                  <input type="number" step="0.01" className={inputClass} value={depositoMinimo} onChange={(e) => setDepositoMinimo(e.target.value)} />
+                </label>
+                <label className={labelClass}>
+                  Tope máximo del bono
+                  <input type="number" step="0.01" className={inputClass} value={bonoMaximo} onChange={(e) => setBonoMaximo(e.target.value)} />
+                </label>
+              </>
+            )}
+            <label className={labelClass}>
+              Rollover (veces que hay que jugar depósito + bono antes de retirar)
+              <input type="number" step="0.01" className={inputClass} value={rolloverMultiplicador} onChange={(e) => setRolloverMultiplicador(e.target.value)} />
             </label>
           </div>
 

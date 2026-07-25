@@ -76,6 +76,8 @@ function ReclamarForm({ bono, onDone }: { bono: Bono; onDone: () => void }) {
 export function BonosDisponibles() {
   const [bonos, setBonos] = useState<Bono[]>([]);
   const [cargado, setCargado] = useState(false);
+  const [query, setQuery] = useState("");
+  const [soloDisponibles, setSoloDisponibles] = useState(false);
 
   function recargar() {
     accionBonosDisponibles().then((data) => {
@@ -90,21 +92,49 @@ export function BonosDisponibles() {
 
   if (!cargado) return <p className="text-sm text-slate-400">Cargando…</p>;
 
+  const q = query.trim().toLowerCase();
+  const visibles = bonos.filter((b) => {
+    if (soloDisponibles && !b.disponible) return false;
+    if (!q) return true;
+    return (
+      b.casino.nombreCasino.toLowerCase().includes(q) ||
+      b.nombre.toLowerCase().includes(q) ||
+      `${b.casino.letra}.${b.casino.perfil}`.toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50 text-left text-slate-500">
-          <tr>
-            <th className="px-3 py-2">Casino</th>
-            <th className="px-3 py-2">Bono</th>
-            <th className="px-3 py-2">Tabla de depósito → bono</th>
-            <th className="px-3 py-2">Último reclamo</th>
-            <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2" />
-          </tr>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          placeholder="Buscar por casino o perfil (ej. Codere, A.101)"
+          className="w-full max-w-sm rounded border border-slate-300 px-3 py-2 text-sm"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" checked={soloDisponibles} onChange={(e) => setSoloDisponibles(e.target.checked)} />
+          Solo disponibles ahora
+        </label>
+        <span className="text-xs text-slate-400">
+          {visibles.length} de {bonos.length}
+        </span>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50 text-left text-slate-500">
+            <tr>
+              <th className="px-3 py-2">Casino</th>
+              <th className="px-3 py-2">Bono</th>
+              <th className="px-3 py-2">Tabla de depósito → bono</th>
+              <th className="px-3 py-2">Último reclamo</th>
+              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2" />
+            </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {bonos.map((b) => (
+          {visibles.map((b) => (
             <tr key={b.id}>
               <td className="px-3 py-2">
                 {b.casino.nombreCasino} <span className="text-xs text-slate-400">({b.casino.letra}.{b.casino.perfil})</span>
@@ -114,7 +144,11 @@ export function BonosDisponibles() {
               </td>
               <td className="px-3 py-2 text-xs text-slate-500">
                 {b.multiplicador ? (
-                  <span>Depósito × {b.multiplicador}</span>
+                  <span>
+                    Depósito × {b.multiplicador}
+                    {b.bonoMaximo ? ` (tope ${money(b.bonoMaximo)})` : ""}
+                    {b.depositoMinimo ? ` · mín. ${money(b.depositoMinimo)}` : ""}
+                  </span>
                 ) : (
                   <>
                     {b.tiers.map((t) => (
@@ -125,6 +159,9 @@ export function BonosDisponibles() {
                     ))}
                     {b.tiers.length === 0 && "—"}
                   </>
+                )}
+                {b.rolloverMultiplicador && (
+                  <div className="mt-0.5 text-amber-700">Rollover {b.rolloverMultiplicador}X</div>
                 )}
               </td>
               <td className="px-3 py-2">{b.ultimoReclamo ? fecha(b.ultimoReclamo) : "Nunca"}</td>
@@ -142,15 +179,16 @@ export function BonosDisponibles() {
               <td className="px-3 py-2">{b.disponible && <ReclamarForm bono={b} onDone={recargar} />}</td>
             </tr>
           ))}
-          {bonos.length === 0 && (
+          {visibles.length === 0 && (
             <tr>
               <td className="px-3 py-3 text-slate-400" colSpan={6}>
-                Sin reglas de bono activas. Configúralas desde Gestión → Casinos.
+                {bonos.length === 0 ? "Sin reglas de bono activas. Configúralas desde Gestión → Casinos." : "Sin resultados con estos filtros."}
               </td>
             </tr>
           )}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   );
 }

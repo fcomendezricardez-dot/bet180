@@ -18,6 +18,9 @@ const ReglaBonoSchema = z.object({
   montoMinimo: z.number().nonnegative().optional(),
   /// si se define, el bono = monto × multiplicador (ej. 2 = el doble) en vez de usar la tabla de tiers
   multiplicador: z.number().positive().optional(),
+  depositoMinimo: z.number().nonnegative().optional(),
+  bonoMaximo: z.number().positive().optional(),
+  rolloverMultiplicador: z.number().positive().optional(),
   activo: z.boolean().default(true),
   notas: z.string().optional(),
   tiers: z.array(TierSchema).default([]),
@@ -37,6 +40,9 @@ export async function crearReglaBono(actor: Actor, input: z.infer<typeof ReglaBo
       momioMinimo: data.momioMinimo,
       montoMinimo: data.montoMinimo,
       multiplicador: data.multiplicador,
+      depositoMinimo: data.depositoMinimo,
+      bonoMaximo: data.bonoMaximo,
+      rolloverMultiplicador: data.rolloverMultiplicador,
       activo: data.activo,
       notas: data.notas,
       tiers: { create: data.tiers },
@@ -137,6 +143,9 @@ export async function bonosDisponibles(actor: Actor) {
         tipo: r.tipo,
         casino: r.casino,
         multiplicador: r.multiplicador ? r.multiplicador.toNumber() : null,
+        depositoMinimo: r.depositoMinimo ? r.depositoMinimo.toNumber() : null,
+        bonoMaximo: r.bonoMaximo ? r.bonoMaximo.toNumber() : null,
+        rolloverMultiplicador: r.rolloverMultiplicador ? r.rolloverMultiplicador.toNumber() : null,
         tiers: r.tiers.map((t) => ({
           id: t.id,
           depositoMin: t.depositoMin.toNumber(),
@@ -164,7 +173,13 @@ export async function registrarReclamoBono(actor: Actor, input: z.infer<typeof R
 
   let bonoOtorgado: number;
   if (regla.multiplicador) {
+    if (regla.depositoMinimo && data.monto < regla.depositoMinimo.toNumber()) {
+      throw new Error(`El depósito mínimo para este bono es ${regla.depositoMinimo.toNumber()}.`);
+    }
     bonoOtorgado = data.monto * regla.multiplicador.toNumber();
+    if (regla.bonoMaximo && bonoOtorgado > regla.bonoMaximo.toNumber()) {
+      bonoOtorgado = regla.bonoMaximo.toNumber();
+    }
   } else {
     const tier = regla.tiers.find(
       (t) => data.monto >= t.depositoMin.toNumber() && (t.depositoMax === null || data.monto <= t.depositoMax.toNumber()),

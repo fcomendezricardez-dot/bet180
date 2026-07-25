@@ -240,6 +240,9 @@ export type ReglaBonoInput = {
   momioMinimo?: number;
   montoMinimo?: number;
   multiplicador?: number;
+  depositoMinimo?: number;
+  bonoMaximo?: number;
+  rolloverMultiplicador?: number;
   activo: boolean;
   notas?: string;
   tiers: { depositoMin: number; depositoMax?: number; bonoMonto: number }[];
@@ -260,6 +263,9 @@ export async function accionListReglasBono(casinoId: string) {
     momioMinimo: r.momioMinimo ? r.momioMinimo.toNumber() : null,
     montoMinimo: r.montoMinimo ? r.montoMinimo.toNumber() : null,
     multiplicador: r.multiplicador ? r.multiplicador.toNumber() : null,
+    depositoMinimo: r.depositoMinimo ? r.depositoMinimo.toNumber() : null,
+    bonoMaximo: r.bonoMaximo ? r.bonoMaximo.toNumber() : null,
+    rolloverMultiplicador: r.rolloverMultiplicador ? r.rolloverMultiplicador.toNumber() : null,
     tiers: r.tiers.map((t) => ({
       id: t.id,
       depositoMin: t.depositoMin.toNumber(),
