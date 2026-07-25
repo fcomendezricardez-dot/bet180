@@ -10,7 +10,7 @@ export class ForbiddenError extends Error {
   }
 }
 
-/** Solo ADMIN puede continuar (alta de cuentas/casinos, editar status, reportes, tarjetas). */
+/** Solo ADMIN puede continuar (alta de cuentas/casinos, editar status, reportes). */
 export function assertAdmin(actor: Actor) {
   if (actor.rol !== "ADMIN") throw new ForbiddenError();
 }

@@ -94,11 +94,29 @@ model Cuenta {
 
   movimientos       Movimiento[]
   casinosCobranAqui Casino[]     @relation("CasinoCobraEnCuenta")
+  saldosDiarios     SaldoDiario[]
 
   @@index([letra])
   @@index([status])
   @@index([idCliente])
   @@map("cuentas")
+}
+
+/// Foto diaria del saldo de una cuenta (una fila por cuenta por día), para
+/// poder calcular el promedio mensual real y detectar riesgo de comisión por
+/// fondeo bajo. Se llena vía un cron diario (ver /api/cron/snapshot-saldos).
+model SaldoDiario {
+  id       Int      @id @default(autoincrement())
+  cuentaId String   @map("cuenta_id")
+  cuenta   Cuenta   @relation(fields: [cuentaId], references: [id])
+  fecha    DateTime @db.Date
+  saldo    Decimal  @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([cuentaId, fecha])
+  @@index([fecha])
+  @@map("saldos_diarios")
 }
 
 // ---------------------------------------------------------------------------

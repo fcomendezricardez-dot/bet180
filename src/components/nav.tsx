@@ -12,9 +12,9 @@ const ADMIN_LINKS = [
   { href: "/admin/alta", label: "Gestión (Alta/Edición)" },
   { href: "/admin/status", label: "Editar Status" },
   { href: "/admin/reportes", label: "Reportes" },
-  { href: "/admin/tarjetas", label: "Tarjetas" },
   { href: "/admin/clientes", label: "Buscador Clientes" },
   { href: "/admin/arqueo", label: "Arqueo" },
+  { href: "/admin/atencion", label: "Punto de Atención" },
 ];
 
 export async function Nav() {

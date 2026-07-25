@@ -126,6 +126,11 @@ export function ClientesBuscador() {
                       <th className="px-3 py-2">Usuario</th>
                       <th className="px-3 py-2">Contraseña</th>
                       <th className="px-3 py-2">Saldo</th>
+                      <th className="px-3 py-2">No. Tarjeta</th>
+                      <th className="px-3 py-2">Vencimiento</th>
+                      <th className="px-3 py-2">CVV</th>
+                      <th className="px-3 py-2">NIP</th>
+                      <th className="px-3 py-2">Custodia</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -137,11 +142,16 @@ export function ClientesBuscador() {
                         <td className="px-3 py-2">{c.usuario ?? "—"}</td>
                         <td className="px-3 py-2">{c.contrasena ?? "—"}</td>
                         <td className="px-3 py-2">{money(c.saldo)}</td>
+                        <td className="px-3 py-2">{c.nTarjeta ?? "—"}</td>
+                        <td className="px-3 py-2">{c.exp ?? "—"}</td>
+                        <td className="px-3 py-2">{c.cvv ?? "—"}</td>
+                        <td className="px-3 py-2">{c.nip ?? "—"}</td>
+                        <td className="px-3 py-2">{c.ubicacionCustodia ?? "—"}</td>
                       </tr>
                     ))}
                     {ficha.cuentas.length === 0 && (
                       <tr>
-                        <td className="px-3 py-3 text-slate-400" colSpan={6}>
+                        <td className="px-3 py-3 text-slate-400" colSpan={11}>
                           Sin cuentas.
                         </td>
                       </tr>

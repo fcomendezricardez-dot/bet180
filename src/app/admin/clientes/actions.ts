@@ -33,6 +33,11 @@ export async function accionObtenerFicha(id: string) {
       clabe: c.clabe,
       usuario: c.usuario,
       contrasena: c.contrasena,
+      nTarjeta: c.nTarjeta,
+      exp: c.exp,
+      cvv: c.cvv,
+      nip: c.nip,
+      ubicacionCustodia: c.ubicacionCustodia,
       saldo: c.saldo.toNumber(),
     })),
     casinos: casinos.map((c) => ({

@@ -103,7 +103,10 @@ export async function obtenerFichaCliente(actor: Actor, id: string) {
     casinos.map(async (c) => ({ ...c, saldo: await calcularSaldoCasino(c.id) })),
   );
 
-  return { cliente, cuentas: cuentasConSaldo, casinos: casinosConSaldo };
+  // `cliente` trae anexada la relación cruda `cuentas` (con Decimal sin convertir)
+  // por el `include`; se descarta aquí porque ya viene aparte en cuentasConSaldo.
+  const { cuentas: _cuentasCrudas, ...clienteSinRelaciones } = cliente;
+  return { cliente: clienteSinRelaciones, cuentas: cuentasConSaldo, casinos: casinosConSaldo };
 }
 
 export function parsearEquipo(equipo: string | null): { letra: string; perfil: string } | null {

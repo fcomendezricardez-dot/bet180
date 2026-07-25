@@ -6,7 +6,11 @@ const PUBLIC_PATHS = ["/login"];
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p)) || pathname.startsWith("/api/auth")) {
+  if (
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/cron")
+  ) {
     return NextResponse.next();
   }
 

@@ -1,0 +1,11 @@
+import { registrarSnapshotDiario } from "@/lib/fondeo";
+
+export async function GET(request: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (secret && request.headers.get("authorization") !== `Bearer ${secret}`) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const resultado = await registrarSnapshotDiario();
+  return Response.json({ ok: true, ...resultado });
+}
