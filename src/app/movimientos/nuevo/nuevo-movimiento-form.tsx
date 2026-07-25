@@ -261,22 +261,22 @@ function ApuestaSeccion({
   const [mercado, setMercado] = useState<"LOCAL" | "EMPATE" | "VISITANTE">("LOCAL");
   const [descripcion, setDescripcion] = useState("");
   const [momio, setMomio] = useState("");
-  const [apostado, setApostado] = useState("");
-  const [tipoSaldo, setTipoSaldo] = useState<"EFECTIVO" | "BONO">("EFECTIVO");
+  const [efectivo, setEfectivo] = useState("");
+  const [freebet, setFreebet] = useState("");
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const posibleGanancia = useMemo(() => {
     const m = parseFloat(momio);
-    const a = parseFloat(apostado);
-    if (Number.isNaN(m) || Number.isNaN(a)) return 0;
-    return m * a;
-  }, [momio, apostado]);
+    const e = parseFloat(efectivo) || 0;
+    const f = parseFloat(freebet) || 0;
+    if (Number.isNaN(m)) return 0;
+    return m * (e + f);
+  }, [momio, efectivo, freebet]);
 
   function submit() {
     setMensaje(null);
     startTransition(async () => {
-      const monto = parseFloat(apostado);
       const result = await accionRegistrarApuesta({
         casinoId: casino.id,
         letra: casino.letra,
@@ -285,21 +285,24 @@ function ApuestaSeccion({
         mercado,
         descripcion: descripcion || undefined,
         momio: parseFloat(momio),
-        saldoReal: tipoSaldo === "EFECTIVO" ? monto : 0,
-        bono: tipoSaldo === "BONO" ? monto : 0,
+        saldoReal: parseFloat(efectivo) || 0,
+        bono: parseFloat(freebet) || 0,
       });
       if (result.ok) {
         setMensaje("Apuesta registrada.");
         setEvento("");
         setDescripcion("");
         setMomio("");
-        setApostado("");
+        setEfectivo("");
+        setFreebet("");
         onDone();
       } else {
         setMensaje(`Error: ${result.error}`);
       }
     });
   }
+
+  const montoInvalido = (parseFloat(efectivo) || 0) + (parseFloat(freebet) || 0) <= 0;
 
   return (
     <section onFocus={onFocus}>
@@ -326,24 +329,25 @@ function ApuestaSeccion({
           <input type="number" step="0.01" className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5" value={momio} onChange={(e) => setMomio(e.target.value)} />
         </label>
         <label className="text-sm">
-          Apostado
-          <input type="number" step="0.01" className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5" value={apostado} onChange={(e) => setApostado(e.target.value)} />
+          Efectivo
+          <input type="number" step="0.01" className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5" value={efectivo} onChange={(e) => setEfectivo(e.target.value)} />
         </label>
         <label className="text-sm">
-          Tipo de Saldo
-          <select className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5" value={tipoSaldo} onChange={(e) => setTipoSaldo(e.target.value as typeof tipoSaldo)}>
-            <option value="EFECTIVO">Efectivo</option>
-            <option value="BONO">Bono</option>
-          </select>
+          Freebet
+          <input type="number" step="0.01" className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5" value={freebet} onChange={(e) => setFreebet(e.target.value)} />
         </label>
       </div>
+      <p className="mt-1 text-xs text-slate-400">
+        Si la apuesta usa una promoción de freebet, puedes repartir el monto entre Efectivo y Freebet — se descuentan
+        cada uno de su propio saldo.
+      </p>
       <p className="mt-2 text-sm text-slate-600">
         Posible Ganancia: <strong>{money(posibleGanancia)}</strong>
       </p>
       {mensaje && <p className="mt-1 text-sm text-slate-600">{mensaje}</p>}
       <button
         type="button"
-        disabled={pending || !evento || !momio || !apostado}
+        disabled={pending || !evento || !momio || montoInvalido}
         onClick={submit}
         className="mt-2 rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
       >
