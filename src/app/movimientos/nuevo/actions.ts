@@ -120,6 +120,7 @@ export async function accionRegistrarApuesta(input: {
   momio: number;
   saldoReal: number;
   bono: number;
+  tipoBono?: "FREEBET" | "DINERO";
 }): Promise<ActionResult> {
   try {
     const actor = await actorOrThrow();

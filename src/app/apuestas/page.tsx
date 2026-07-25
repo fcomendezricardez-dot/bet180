@@ -25,6 +25,7 @@ export default async function ApuestasPage() {
       momio: a.momio.toNumber(),
       saldoReal: a.saldoReal.toNumber(),
       bono: a.bono.toNumber(),
+      tipoBono: a.tipoBono,
       posibleGanancia: a.posibleGanancia.toNumber(),
       statusApuesta: a.statusApuesta,
       resultadoGanancia: a.gananciasRelacionadas[0]?.resultadoGanancia?.toNumber() ?? null,

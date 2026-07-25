@@ -262,17 +262,18 @@ function ApuestaSeccion({
   const [descripcion, setDescripcion] = useState("");
   const [momio, setMomio] = useState("");
   const [efectivo, setEfectivo] = useState("");
-  const [freebet, setFreebet] = useState("");
+  const [bono, setBono] = useState("");
+  const [tipoBono, setTipoBono] = useState<"FREEBET" | "DINERO">("FREEBET");
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const posibleGanancia = useMemo(() => {
     const m = parseFloat(momio);
     const e = parseFloat(efectivo) || 0;
-    const f = parseFloat(freebet) || 0;
+    const b = parseFloat(bono) || 0;
     if (Number.isNaN(m)) return 0;
-    return m * (e + f);
-  }, [momio, efectivo, freebet]);
+    return m * (e + b);
+  }, [momio, efectivo, bono]);
 
   function submit() {
     setMensaje(null);
@@ -286,7 +287,8 @@ function ApuestaSeccion({
         descripcion: descripcion || undefined,
         momio: parseFloat(momio),
         saldoReal: parseFloat(efectivo) || 0,
-        bono: parseFloat(freebet) || 0,
+        bono: parseFloat(bono) || 0,
+        tipoBono: parseFloat(bono) > 0 ? tipoBono : undefined,
       });
       if (result.ok) {
         setMensaje("Apuesta registrada.");
@@ -294,7 +296,8 @@ function ApuestaSeccion({
         setDescripcion("");
         setMomio("");
         setEfectivo("");
-        setFreebet("");
+        setBono("");
+        setTipoBono("FREEBET");
         onDone();
       } else {
         setMensaje(`Error: ${result.error}`);
@@ -302,7 +305,7 @@ function ApuestaSeccion({
     });
   }
 
-  const montoInvalido = (parseFloat(efectivo) || 0) + (parseFloat(freebet) || 0) <= 0;
+  const montoInvalido = (parseFloat(efectivo) || 0) + (parseFloat(bono) || 0) <= 0;
 
   return (
     <section onFocus={onFocus}>
@@ -333,13 +336,26 @@ function ApuestaSeccion({
           <input type="number" step="0.01" className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5" value={efectivo} onChange={(e) => setEfectivo(e.target.value)} />
         </label>
         <label className="text-sm">
-          Freebet
-          <input type="number" step="0.01" className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5" value={freebet} onChange={(e) => setFreebet(e.target.value)} />
+          Bono
+          <input type="number" step="0.01" className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5" value={bono} onChange={(e) => setBono(e.target.value)} />
         </label>
+        {parseFloat(bono) > 0 && (
+          <label className="text-sm">
+            Tipo de bono
+            <select
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5"
+              value={tipoBono}
+              onChange={(e) => setTipoBono(e.target.value as typeof tipoBono)}
+            >
+              <option value="FREEBET">Freebet (no regresa el capital si gana)</option>
+              <option value="DINERO">Dinero (se comporta como efectivo)</option>
+            </select>
+          </label>
+        )}
       </div>
       <p className="mt-1 text-xs text-slate-400">
-        Si la apuesta usa una promoción de freebet, puedes repartir el monto entre Efectivo y Freebet — se descuentan
-        cada uno de su propio saldo.
+        Si la apuesta usa una promoción, puedes repartir el monto entre Efectivo y Bono — se descuentan cada uno de su
+        propio saldo. Marca si el bono es Freebet o Dinero para saber cómo calcular el pago si gana.
       </p>
       <p className="mt-2 text-sm text-slate-600">
         Posible Ganancia: <strong>{money(posibleGanancia)}</strong>

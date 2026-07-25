@@ -16,6 +16,7 @@ type Fila = {
   momio: number;
   saldoReal: number;
   bono: number;
+  tipoBono: "FREEBET" | "DINERO" | null;
   posibleGanancia: number;
 };
 
@@ -100,7 +101,14 @@ export function CerrarApuestaTable({ apuestas }: { apuestas: Fila[] }) {
                 <td className="px-3 py-2">{f.mercado}</td>
                 <td className="px-3 py-2">{f.momio}</td>
                 <td className="px-3 py-2">{money(f.saldoReal)}</td>
-                <td className="px-3 py-2">{money(f.bono)}</td>
+                <td className="px-3 py-2">
+                  {money(f.bono)}
+                  {f.bono > 0 && f.tipoBono && (
+                    <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
+                      {f.tipoBono === "FREEBET" ? "Freebet" : "Dinero"}
+                    </span>
+                  )}
+                </td>
                 <td className="px-3 py-2">{money(f.posibleGanancia)}</td>
                 <td className="px-3 py-2">
                   {gananciaAbierta === f.id ? (

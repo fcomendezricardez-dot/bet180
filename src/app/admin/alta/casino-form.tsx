@@ -8,6 +8,7 @@ import {
   accionObtenerCasino,
   buscarCuentasParaCobraEn,
 } from "./actions";
+import { ReglasBono } from "./reglas-bono";
 
 function slugify(nombre: string) {
   return nombre
@@ -270,6 +271,12 @@ export function CasinoForm() {
       >
         {editando ? "Guardar cambios" : "Dar de alta casino"}
       </button>
+
+      {editando && (
+        <div className="border-t border-slate-200 pt-4">
+          <ReglasBono casinoId={casinoId!} />
+        </div>
+      )}
     </div>
   );
 }

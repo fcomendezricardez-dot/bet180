@@ -17,6 +17,7 @@ type Fila = {
   momio: number;
   saldoReal: number;
   bono: number;
+  tipoBono: "FREEBET" | "DINERO" | null;
   posibleGanancia: number;
   statusApuesta: StatusApuesta;
   resultadoGanancia: number | null;
@@ -152,7 +153,14 @@ export function ApuestasTable({ apuestas }: { apuestas: Fila[] }) {
                 <td className="px-3 py-2">{a.mercado}</td>
                 <td className="px-3 py-2">{a.momio}</td>
                 <td className="px-3 py-2">{money(a.saldoReal)}</td>
-                <td className="px-3 py-2">{money(a.bono)}</td>
+                <td className="px-3 py-2">
+                  {money(a.bono)}
+                  {a.bono > 0 && a.tipoBono && (
+                    <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
+                      {a.tipoBono === "FREEBET" ? "Freebet" : "Dinero"}
+                    </span>
+                  )}
+                </td>
                 <td className="px-3 py-2">{money(a.posibleGanancia)}</td>
                 <td className="px-3 py-2">{a.resultadoGanancia !== null ? money(a.resultadoGanancia) : "—"}</td>
                 <td className="px-3 py-2">

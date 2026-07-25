@@ -2,6 +2,12 @@
 
 import { auth } from "@/auth";
 import { type Actor, ForbiddenError } from "@/lib/authz";
+import {
+  crearReglaBono,
+  actualizarReglaBono,
+  eliminarReglaBono,
+  listReglasBonoPorCasino,
+} from "@/lib/bonos";
 import { crearCasino, actualizarCasino, getCasino } from "@/lib/casinos";
 import { crearCuenta, actualizarCuenta, getCuenta } from "@/lib/cuentas";
 import { buscarClientes, crearCliente, actualizarCliente, getClienteParaEditar } from "@/lib/clientes";
@@ -221,4 +227,65 @@ export async function accionBuscarClientes(query: string) {
 export async function accionObtenerCliente(id: string) {
   const actor = await adminOrThrow();
   return getClienteParaEditar(actor, id);
+}
+
+// ---------- Bonos ----------
+
+export type ReglaBonoInput = {
+  casinoId: string;
+  nombre: string;
+  tipo: "DEPOSITO_MES" | "CADA_N_DIAS" | "BIENVENIDA";
+  diaCorteMes?: number;
+  cadaDias?: number;
+  momioMinimo?: number;
+  montoMinimo?: number;
+  activo: boolean;
+  notas?: string;
+  tiers: { depositoMin: number; depositoMax?: number; bonoMonto: number }[];
+};
+
+export async function accionListReglasBono(casinoId: string) {
+  const actor = await adminOrThrow();
+  const reglas = await listReglasBonoPorCasino(actor, casinoId);
+  return reglas.map((r) => ({
+    ...r,
+    momioMinimo: r.momioMinimo ? r.momioMinimo.toNumber() : null,
+    montoMinimo: r.montoMinimo ? r.montoMinimo.toNumber() : null,
+    tiers: r.tiers.map((t) => ({
+      id: t.id,
+      depositoMin: t.depositoMin.toNumber(),
+      depositoMax: t.depositoMax ? t.depositoMax.toNumber() : null,
+      bonoMonto: t.bonoMonto.toNumber(),
+    })),
+  }));
+}
+
+export async function accionCrearReglaBono(input: ReglaBonoInput): Promise<ActionResult> {
+  try {
+    const actor = await adminOrThrow();
+    await crearReglaBono(actor, input);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+export async function accionActualizarReglaBono(id: number, input: Partial<ReglaBonoInput>): Promise<ActionResult> {
+  try {
+    const actor = await adminOrThrow();
+    await actualizarReglaBono(actor, id, input);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+export async function accionEliminarReglaBono(id: number): Promise<ActionResult> {
+  try {
+    const actor = await adminOrThrow();
+    await eliminarReglaBono(actor, id);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
 }

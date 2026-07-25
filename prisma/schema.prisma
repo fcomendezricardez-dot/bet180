@@ -216,7 +216,8 @@ model Casino {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  apuestas Apuesta[]
+  apuestas   Apuesta[]
+  reglasBono ReglaBono[]
 
   @@index([letra])
   @@index([statusCasino])
@@ -293,6 +294,12 @@ enum StatusApuesta {
   PERDIDA
 }
 
+/// Freebet: si ganas, no se regresa el capital apostado. Dinero: se comporta como efectivo normal.
+enum TipoBonoApuesta {
+  FREEBET
+  DINERO
+}
+
 model Apuesta {
   id     Int      @id @default(autoincrement())
   fecha  DateTime @default(now())
@@ -310,6 +317,8 @@ model Apuesta {
 
   saldoReal Decimal @map("saldo_real") @db.Decimal(14, 2)
   bono      Decimal @default(0) @db.Decimal(14, 2)
+  /// tipo del monto en `bono`: freebet (no regresa el capital al ganar) o dinero (se comporta como efectivo)
+  tipoBono  TipoBonoApuesta? @map("tipo_bono")
 
   /// = momio × (saldo_real + bono)
   posibleGanancia Decimal @map("posible_ganancia") @db.Decimal(14, 2)
@@ -330,4 +339,79 @@ model Apuesta {
   @@index([letra])
   @@index([statusApuesta])
   @@map("apuestas")
+}
+
+// ---------------------------------------------------------------------------
+// 2.5 Promociones / Bonos por casino
+// ---------------------------------------------------------------------------
+
+enum TipoBono {
+  /// se puede pedir una vez por mes, hasta cierto día del mes
+  DEPOSITO_MES
+  /// se puede volver a pedir cada N días desde el último reclamo
+  CADA_N_DIAS
+  /// una sola vez (ej. bono de bienvenida)
+  BIENVENIDA
+}
+
+/// Reglas de una promoción de un casino (ej. "Bono cada 25 días" de Codere).
+model ReglaBono {
+  id       Int    @id @default(autoincrement())
+  casinoId String @map("casino_id")
+  casino   Casino @relation(fields: [casinoId], references: [id])
+
+  nombre String
+  tipo   TipoBono
+
+  /// para DEPOSITO_MES: día límite del mes para calificar (ej. 15)
+  diaCorteMes Int? @map("dia_corte_mes")
+  /// para CADA_N_DIAS: cada cuántos días se puede volver a solicitar (ej. 25)
+  cadaDias Int? @map("cada_dias")
+
+  /// para BIENVENIDA: momio mínimo requerido para liberar el bono (formato decimal, ej. 1.5)
+  momioMinimo Decimal? @map("momio_minimo") @db.Decimal(8, 3)
+  /// monto mínimo de apuesta para liberar el bono
+  montoMinimo Decimal? @map("monto_minimo") @db.Decimal(14, 2)
+
+  activo Boolean @default(true)
+  notas  String?
+
+  tiers    BonoTier[]
+  reclamos BonoReclamo[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([casinoId])
+  @@map("reglas_bono")
+}
+
+/// Tabla de depósito → bono de una regla (ej. depositas 400, te dan 800 en freebet).
+model BonoTier {
+  id      Int       @id @default(autoincrement())
+  reglaId Int       @map("regla_id")
+  regla   ReglaBono @relation(fields: [reglaId], references: [id], onDelete: Cascade)
+
+  depositoMin Decimal  @map("deposito_min") @db.Decimal(14, 2)
+  /// null = sin tope superior
+  depositoMax Decimal? @map("deposito_max") @db.Decimal(14, 2)
+  bonoMonto   Decimal  @map("bono_monto") @db.Decimal(14, 2)
+
+  @@index([reglaId])
+  @@map("bono_tiers")
+}
+
+/// Historial de veces que se ha reclamado un bono — resetea el conteo de la cadencia.
+model BonoReclamo {
+  id      Int       @id @default(autoincrement())
+  reglaId Int       @map("regla_id")
+  regla   ReglaBono @relation(fields: [reglaId], references: [id], onDelete: Cascade)
+
+  fecha         DateTime @default(now())
+  monto         Decimal  @db.Decimal(14, 2)
+  bonoOtorgado  Decimal  @map("bono_otorgado") @db.Decimal(14, 2)
+  registradoPor String   @map("registrado_por")
+
+  @@index([reglaId])
+  @@map("bono_reclamos")
 }

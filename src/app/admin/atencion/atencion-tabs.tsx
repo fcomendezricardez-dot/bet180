@@ -38,7 +38,7 @@ export function AtencionTabs({ ine, recargas, fondeo }: { ine: Ine; recargas: Re
             }`}
           >
             {t.label}
-            {conteos[t.value] > 0 && (
+            {(conteos[t.value] ?? 0) > 0 && (
               <span
                 className={`ml-2 rounded-full px-1.5 py-0.5 text-xs ${
                   tab === t.value ? "bg-white/20" : "bg-slate-200 text-slate-600"

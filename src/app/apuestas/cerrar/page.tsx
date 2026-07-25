@@ -22,6 +22,7 @@ export default async function CerrarApuestaPage() {
     momio: a.momio.toNumber(),
     saldoReal: a.saldoReal.toNumber(),
     bono: a.bono.toNumber(),
+    tipoBono: a.tipoBono,
     posibleGanancia: a.posibleGanancia.toNumber(),
   }));
 

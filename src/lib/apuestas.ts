@@ -13,6 +13,7 @@ const RegistrarApuestaSchema = z.object({
   momio: z.number().positive(),
   saldoReal: z.number().nonnegative(),
   bono: z.number().nonnegative().default(0),
+  tipoBono: z.enum(["FREEBET", "DINERO"]).optional(),
 });
 
 /**
@@ -37,6 +38,7 @@ export async function registrarApuesta(actor: Actor, input: z.infer<typeof Regis
       momio: data.momio,
       saldoReal: data.saldoReal,
       bono: data.bono,
+      tipoBono: data.bono > 0 ? data.tipoBono : undefined,
       posibleGanancia,
       statusApuesta: "EN_JUEGO",
     },
