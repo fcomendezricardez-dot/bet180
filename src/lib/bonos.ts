@@ -190,12 +190,122 @@ export async function registrarReclamoBono(actor: Actor, input: z.infer<typeof R
     bonoOtorgado = tier.bonoMonto.toNumber();
   }
 
+  const rolloverRequerido = regla.rolloverMultiplicador
+    ? (data.monto + bonoOtorgado) * regla.rolloverMultiplicador.toNumber()
+    : undefined;
+
   return prisma.bonoReclamo.create({
     data: {
       reglaId: data.reglaId,
       monto: data.monto,
       bonoOtorgado,
+      rolloverRequerido,
       registradoPor: actor.rol === "ADMIN" ? "admin" : `operador.${actor.letra}`,
     },
   });
+}
+
+/**
+ * Progreso de rollover de un reclamo: suma las apuestas vinculadas según la
+ * regla estándar — ganadoras cuentan lo menor entre arriesgado y ganado,
+ * perdedoras cuentan lo arriesgado, en juego no cuenta todavía, y solo la
+ * parte de saldo real (no el bono) cuenta.
+ */
+async function calcularProgresoRollover(reclamoId: number): Promise<number> {
+  const apuestas = await prisma.apuesta.findMany({
+    where: { reclamoBonoId: reclamoId, apuestaRelacionadaId: null },
+    include: { gananciasRelacionadas: { select: { resultadoGanancia: true } } },
+  });
+
+  return apuestas.reduce((acc, a) => {
+    const arriesgado = a.saldoReal.toNumber();
+    if (a.statusApuesta === "GANADA") {
+      const ganado = a.gananciasRelacionadas[0]?.resultadoGanancia?.toNumber() ?? arriesgado;
+      return acc + Math.min(arriesgado, ganado);
+    }
+    if (a.statusApuesta === "PERDIDA") {
+      return acc + arriesgado;
+    }
+    return acc; // EN_JUEGO: aún no cuenta
+  }, 0);
+}
+
+/** Reclamos con rollover pendiente de un casino (para vincular apuestas nuevas). */
+export async function reclamosPendientesDeCasino(actor: Actor, casinoId: string) {
+  const casino = await prisma.casino.findUniqueOrThrow({ where: { id: casinoId } });
+  assertLetraAccess(actor, casino.letra);
+
+  const reclamos = await prisma.bonoReclamo.findMany({
+    where: { regla: { casinoId }, rolloverRequerido: { not: null }, rolloverLiberado: false },
+    include: { regla: { select: { nombre: true } } },
+    orderBy: { fecha: "desc" },
+  });
+
+  return Promise.all(
+    reclamos.map(async (r) => ({
+      id: r.id,
+      nombreRegla: r.regla.nombre,
+      fecha: r.fecha,
+      monto: r.monto.toNumber(),
+      bonoOtorgado: r.bonoOtorgado.toNumber(),
+      rolloverRequerido: r.rolloverRequerido!.toNumber(),
+      progreso: await calcularProgresoRollover(r.id),
+    })),
+  );
+}
+
+/** Todos los reclamos con rollover pendiente, para la pantalla Bonos. Solo ADMIN. */
+export async function reclamosConRolloverPendiente(actor: Actor) {
+  assertAdmin(actor);
+
+  const reclamos = await prisma.bonoReclamo.findMany({
+    where: { rolloverRequerido: { not: null }, rolloverLiberado: false },
+    include: {
+      regla: { select: { nombre: true, casino: { select: { id: true, nombreCasino: true, letra: true, perfil: true } } } },
+    },
+    orderBy: { fecha: "desc" },
+  });
+
+  return Promise.all(
+    reclamos.map(async (r) => {
+      const progreso = await calcularProgresoRollover(r.id);
+      const requerido = r.rolloverRequerido!.toNumber();
+      return {
+        id: r.id,
+        nombreRegla: r.regla.nombre,
+        casino: r.regla.casino,
+        fecha: r.fecha,
+        monto: r.monto.toNumber(),
+        bonoOtorgado: r.bonoOtorgado.toNumber(),
+        rolloverRequerido: requerido,
+        progreso,
+        completo: progreso >= requerido,
+      };
+    }),
+  );
+}
+
+/**
+ * Recalcula el progreso de un reclamo y, si ya alcanzó lo requerido, lo marca
+ * liberado automáticamente. Se llama internamente al cerrar una apuesta
+ * vinculada a un reclamo (ver cerrarApuestaGanada/Perdida en lib/apuestas.ts).
+ */
+export async function verificarYLiberarRolloverSiCompleto(reclamoId: number) {
+  const reclamo = await prisma.bonoReclamo.findUnique({ where: { id: reclamoId } });
+  if (!reclamo || !reclamo.rolloverRequerido || reclamo.rolloverLiberado) return;
+
+  const progreso = await calcularProgresoRollover(reclamoId);
+  if (progreso >= reclamo.rolloverRequerido.toNumber()) {
+    await prisma.bonoReclamo.update({ where: { id: reclamoId }, data: { rolloverLiberado: true } });
+  }
+}
+
+/** Marca (o desmarca) el rollover de un reclamo como liberado a mano — ej. cuando el sistema interno del casino ya lo dio por completado. */
+export async function marcarRolloverLiberado(actor: Actor, reclamoId: number, liberado: boolean) {
+  const reclamo = await prisma.bonoReclamo.findUniqueOrThrow({
+    where: { id: reclamoId },
+    include: { regla: { include: { casino: true } } },
+  });
+  assertLetraAccess(actor, reclamo.regla.casino.letra);
+  return prisma.bonoReclamo.update({ where: { id: reclamoId }, data: { rolloverLiberado: liberado } });
 }

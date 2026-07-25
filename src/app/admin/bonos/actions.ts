@@ -2,7 +2,12 @@
 
 import { auth } from "@/auth";
 import { type Actor, ForbiddenError } from "@/lib/authz";
-import { bonosDisponibles, registrarReclamoBono } from "@/lib/bonos";
+import {
+  bonosDisponibles,
+  marcarRolloverLiberado,
+  reclamosConRolloverPendiente,
+  registrarReclamoBono,
+} from "@/lib/bonos";
 
 async function adminOrThrow(): Promise<Actor> {
   const session = await auth();
@@ -23,6 +28,21 @@ export async function accionRegistrarReclamoBono(reglaId: number, monto: number)
   try {
     const actor = await adminOrThrow();
     await registrarReclamoBono(actor, { reglaId, monto });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+export async function accionReclamosConRolloverPendiente() {
+  const actor = await adminOrThrow();
+  return reclamosConRolloverPendiente(actor);
+}
+
+export async function accionMarcarRolloverLiberado(reclamoId: number, liberado: boolean): Promise<ActionResult> {
+  try {
+    const actor = await adminOrThrow();
+    await marcarRolloverLiberado(actor, reclamoId, liberado);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message };

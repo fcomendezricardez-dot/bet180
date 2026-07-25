@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
+  accionReclamosPendientes,
   accionRegistrarApuesta,
   accionRegistrarGastoOperativo,
   accionRegistrarMovimientoBancario,
@@ -16,6 +17,7 @@ type Cliente = Awaited<ReturnType<typeof buscarClientesParaMovimiento>>[number];
 type Casino = Awaited<ReturnType<typeof buscarCasinosPorLetraYPerfil>>[number];
 type Cuenta = Awaited<ReturnType<typeof buscarCuentasPorPerfil>>[number];
 type Disponible = Awaited<ReturnType<typeof widgetDisponibilidad>>[number];
+type ReclamoPendiente = Awaited<ReturnType<typeof accionReclamosPendientes>>[number];
 
 const money = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -264,8 +266,20 @@ function ApuestaSeccion({
   const [efectivo, setEfectivo] = useState("");
   const [bono, setBono] = useState("");
   const [tipoBono, setTipoBono] = useState<"FREEBET" | "DINERO">("FREEBET");
+  const [reclamoBonoId, setReclamoBonoId] = useState("");
+  const [reclamosPendientes, setReclamosPendientes] = useState<ReclamoPendiente[]>([]);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    let cancelado = false;
+    accionReclamosPendientes(casino.id).then((data) => {
+      if (!cancelado) setReclamosPendientes(data);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [casino.id]);
 
   const posibleGanancia = useMemo(() => {
     const m = parseFloat(momio);
@@ -289,6 +303,7 @@ function ApuestaSeccion({
         saldoReal: parseFloat(efectivo) || 0,
         bono: parseFloat(bono) || 0,
         tipoBono: parseFloat(bono) > 0 ? tipoBono : undefined,
+        reclamoBonoId: reclamoBonoId ? parseInt(reclamoBonoId, 10) : undefined,
       });
       if (result.ok) {
         setMensaje("Apuesta registrada.");
@@ -298,6 +313,7 @@ function ApuestaSeccion({
         setEfectivo("");
         setBono("");
         setTipoBono("FREEBET");
+        setReclamoBonoId("");
         onDone();
       } else {
         setMensaje(`Error: ${result.error}`);
@@ -357,6 +373,26 @@ function ApuestaSeccion({
         Si la apuesta usa una promoción, puedes repartir el monto entre Efectivo y Bono — se descuentan cada uno de su
         propio saldo. Marca si el bono es Freebet o Dinero para saber cómo calcular el pago si gana.
       </p>
+      {reclamosPendientes.length > 0 && (
+        <label className="mt-2 block max-w-md text-sm">
+          Vincular a rollover pendiente (opcional)
+          <select
+            className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5"
+            value={reclamoBonoId}
+            onChange={(e) => setReclamoBonoId(e.target.value)}
+          >
+            <option value="">— no vincular —</option>
+            {reclamosPendientes.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.nombreRegla}: {money(r.progreso)} de {money(r.rolloverRequerido)} jugado
+              </option>
+            ))}
+          </select>
+          <p className="mt-0.5 text-xs font-normal text-slate-400">
+            Solo cuenta el monto en Efectivo de esta apuesta hacia el rollover (el bono no cuenta).
+          </p>
+        </label>
+      )}
       <p className="mt-2 text-sm text-slate-600">
         Posible Ganancia: <strong>{money(posibleGanancia)}</strong>
       </p>

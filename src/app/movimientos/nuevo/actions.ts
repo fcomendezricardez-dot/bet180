@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { registrarApuesta } from "@/lib/apuestas";
 import { type Actor } from "@/lib/authz";
+import { reclamosPendientesDeCasino } from "@/lib/bonos";
 import { buscarClientesOperativo } from "@/lib/clientes";
 import {
   registrarDepositoACasino,
@@ -121,6 +122,7 @@ export async function accionRegistrarApuesta(input: {
   saldoReal: number;
   bono: number;
   tipoBono?: "FREEBET" | "DINERO";
+  reclamoBonoId?: number;
 }): Promise<ActionResult> {
   try {
     const actor = await actorOrThrow();
@@ -129,6 +131,12 @@ export async function accionRegistrarApuesta(input: {
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
+}
+
+/** Reclamos de bono con rollover pendiente de un casino, para vincular una apuesta nueva. */
+export async function accionReclamosPendientes(casinoId: string) {
+  const actor = await actorOrThrow();
+  return reclamosPendientesDeCasino(actor, casinoId);
 }
 
 export async function accionRegistrarMovimientoBancario(input: {

@@ -1,4 +1,5 @@
 import { BonosDisponibles } from "./bonos-disponibles";
+import { RolloverPendiente } from "./rollover-pendiente";
 
 export default function BonosPage() {
   return (
@@ -8,6 +9,7 @@ export default function BonosPage() {
         Promociones activas configuradas por casino y si ya se pueden volver a reclamar. Configúralas desde
         Gestión → Casinos.
       </p>
+      <RolloverPendiente />
       <BonosDisponibles />
     </div>
   );

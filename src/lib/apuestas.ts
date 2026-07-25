@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { type Actor, assertLetraAccess } from "@/lib/authz";
+import { verificarYLiberarRolloverSiCompleto } from "@/lib/bonos";
 import { prisma } from "@/lib/prisma";
 
 const RegistrarApuestaSchema = z.object({
@@ -14,6 +15,7 @@ const RegistrarApuestaSchema = z.object({
   saldoReal: z.number().nonnegative(),
   bono: z.number().nonnegative().default(0),
   tipoBono: z.enum(["FREEBET", "DINERO"]).optional(),
+  reclamoBonoId: z.number().int().optional(),
 });
 
 /**
@@ -39,6 +41,7 @@ export async function registrarApuesta(actor: Actor, input: z.infer<typeof Regis
       saldoReal: data.saldoReal,
       bono: data.bono,
       tipoBono: data.bono > 0 ? data.tipoBono : undefined,
+      reclamoBonoId: data.reclamoBonoId,
       posibleGanancia,
       statusApuesta: "EN_JUEGO",
     },
@@ -56,10 +59,16 @@ export async function cerrarApuestaPerdida(actor: Actor, apuestaId: number) {
     throw new Error("Solo se pueden cerrar apuestas que están En juego.");
   }
 
-  return prisma.apuesta.update({
+  const actualizada = await prisma.apuesta.update({
     where: { id: apuestaId },
     data: { statusApuesta: "PERDIDA" },
   });
+
+  if (actualizada.reclamoBonoId) {
+    await verificarYLiberarRolloverSiCompleto(actualizada.reclamoBonoId);
+  }
+
+  return actualizada;
 }
 
 /**
@@ -101,6 +110,10 @@ export async function cerrarApuestaGanada(actor: Actor, apuestaId: number, resul
       },
     }),
   ]);
+
+  if (apuesta.reclamoBonoId) {
+    await verificarYLiberarRolloverSiCompleto(apuesta.reclamoBonoId);
+  }
 
   return ganancia;
 }

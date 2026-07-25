@@ -320,6 +320,10 @@ model Apuesta {
   /// tipo del monto en `bono`: freebet (no regresa el capital al ganar) o dinero (se comporta como efectivo)
   tipoBono  TipoBonoApuesta? @map("tipo_bono")
 
+  /// si esta apuesta cuenta para el rollover de un reclamo de bono específico
+  reclamoBonoId Int?         @map("reclamo_bono_id")
+  reclamoBono   BonoReclamo? @relation(fields: [reclamoBonoId], references: [id])
+
   /// = momio × (saldo_real + bono)
   posibleGanancia Decimal @map("posible_ganancia") @db.Decimal(14, 2)
 
@@ -338,6 +342,7 @@ model Apuesta {
   @@index([casinoId])
   @@index([letra])
   @@index([statusApuesta])
+  @@index([reclamoBonoId])
   @@map("apuestas")
 }
 
@@ -420,6 +425,13 @@ model BonoReclamo {
   monto         Decimal  @db.Decimal(14, 2)
   bonoOtorgado  Decimal  @map("bono_otorgado") @db.Decimal(14, 2)
   registradoPor String   @map("registrado_por")
+
+  /// (monto + bonoOtorgado) × rolloverMultiplicador de la regla al momento del reclamo; null = sin rollover
+  rolloverRequerido Decimal? @map("rollover_requerido") @db.Decimal(14, 2)
+  /// true si ya se completó el rollover (calculado o marcado a mano por el admin)
+  rolloverLiberado  Boolean  @default(false) @map("rollover_liberado")
+
+  apuestas Apuesta[]
 
   @@index([reglaId])
   @@map("bono_reclamos")
