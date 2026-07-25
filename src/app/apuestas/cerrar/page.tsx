@@ -27,7 +27,7 @@ export default async function CerrarApuestaPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold text-slate-900">Cerrar Apuesta</h1>
+      <h1 className="mb-1 text-2xl font-semibold text-slate-900">Eventos Activos</h1>
       <p className="mb-4 text-sm text-slate-500">Apuestas En juego. Marca cada una como Ganada o Perdida.</p>
       <CerrarApuestaTable apuestas={filas} />
     </div>
