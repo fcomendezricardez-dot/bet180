@@ -113,13 +113,19 @@ export function BonosDisponibles() {
                 {b.nombre} <span className="text-xs text-slate-400">({TIPO_LABEL[b.tipo]})</span>
               </td>
               <td className="px-3 py-2 text-xs text-slate-500">
-                {b.tiers.map((t) => (
-                  <div key={t.id}>
-                    {money(t.depositoMin)}
-                    {t.depositoMax ? `–${money(t.depositoMax)}` : "+"} → {money(t.bonoMonto)}
-                  </div>
-                ))}
-                {b.tiers.length === 0 && "—"}
+                {b.multiplicador ? (
+                  <span>Depósito × {b.multiplicador}</span>
+                ) : (
+                  <>
+                    {b.tiers.map((t) => (
+                      <div key={t.id}>
+                        {money(t.depositoMin)}
+                        {t.depositoMax ? `–${money(t.depositoMax)}` : "+"} → {money(t.bonoMonto)}
+                      </div>
+                    ))}
+                    {b.tiers.length === 0 && "—"}
+                  </>
+                )}
               </td>
               <td className="px-3 py-2">{b.ultimoReclamo ? fecha(b.ultimoReclamo) : "Nunca"}</td>
               <td className="px-3 py-2">

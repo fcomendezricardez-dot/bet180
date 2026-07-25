@@ -373,6 +373,9 @@ model ReglaBono {
   /// monto mínimo de apuesta para liberar el bono
   montoMinimo Decimal? @map("monto_minimo") @db.Decimal(14, 2)
 
+  /// si se define, el bono = monto depositado × este multiplicador (ej. 2 = el doble), en vez de buscar en la tabla de tiers
+  multiplicador Decimal? @db.Decimal(6, 3)
+
   activo Boolean @default(true)
   notas  String?
 

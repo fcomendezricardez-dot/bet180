@@ -37,6 +37,7 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
   const [cadaDias, setCadaDias] = useState("25");
   const [momioMinimo, setMomioMinimo] = useState("");
   const [montoMinimo, setMontoMinimo] = useState("");
+  const [multiplicador, setMultiplicador] = useState("");
   const [activo, setActivo] = useState(true);
   const [notas, setNotas] = useState("");
   const [tiers, setTiers] = useState<Tier[]>([tierVacio()]);
@@ -58,6 +59,7 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
     setCadaDias("25");
     setMomioMinimo("");
     setMontoMinimo("");
+    setMultiplicador("");
     setActivo(true);
     setNotas("");
     setTiers([tierVacio()]);
@@ -72,6 +74,7 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
     setCadaDias(r.cadaDias?.toString() ?? "25");
     setMomioMinimo(r.momioMinimo?.toString() ?? "");
     setMontoMinimo(r.montoMinimo?.toString() ?? "");
+    setMultiplicador(r.multiplicador?.toString() ?? "");
     setActivo(r.activo);
     setNotas(r.notas ?? "");
     setTiers(
@@ -116,6 +119,7 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
       cadaDias: tipo === "CADA_N_DIAS" ? parseInt(cadaDias, 10) || undefined : undefined,
       momioMinimo: tipo === "BIENVENIDA" && momioMinimo ? parseFloat(momioMinimo) : undefined,
       montoMinimo: tipo === "BIENVENIDA" && montoMinimo ? parseFloat(montoMinimo) : undefined,
+      multiplicador: multiplicador ? parseFloat(multiplicador) : undefined,
       activo,
       notas: notas || undefined,
       tiers: tiersLimpios,
@@ -164,15 +168,19 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
                   </button>
                 </div>
               </div>
-              {r.tiers.length > 0 && (
-                <ul className="mt-1 text-xs text-slate-500">
-                  {r.tiers.map((t) => (
-                    <li key={t.id}>
-                      Depositas {money(t.depositoMin)}
-                      {t.depositoMax ? `–${money(t.depositoMax)}` : "+"} → bono {money(t.bonoMonto)}
-                    </li>
-                  ))}
-                </ul>
+              {r.multiplicador ? (
+                <p className="mt-1 text-xs text-slate-500">Bono = depósito × {r.multiplicador}</p>
+              ) : (
+                r.tiers.length > 0 && (
+                  <ul className="mt-1 text-xs text-slate-500">
+                    {r.tiers.map((t) => (
+                      <li key={t.id}>
+                        Depositas {money(t.depositoMin)}
+                        {t.depositoMax ? `–${money(t.depositoMax)}` : "+"} → bono {money(t.bonoMonto)}
+                      </li>
+                    ))}
+                  </ul>
+                )
               )}
             </div>
           ))}
@@ -226,9 +234,14 @@ export function ReglasBono({ casinoId }: { casinoId: string }) {
                 </label>
               </>
             )}
+            <label className={labelClass}>
+              Multiplicador (ej. 2 = el doble del depósito)
+              <p className="mt-0.5 text-xs font-normal text-slate-400">Si lo llenas, ignora la tabla de tiers de abajo.</p>
+              <input type="number" step="0.01" className={inputClass} value={multiplicador} onChange={(e) => setMultiplicador(e.target.value)} />
+            </label>
           </div>
 
-          <div>
+          <div className={multiplicador ? "opacity-40" : ""}>
             <p className="mb-1 text-sm font-medium text-slate-700">Tabla de depósito → bono</p>
             {tiers.map((t, i) => (
               <div key={i} className="mb-2 grid grid-cols-3 gap-2">

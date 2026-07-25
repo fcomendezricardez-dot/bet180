@@ -239,6 +239,7 @@ export type ReglaBonoInput = {
   cadaDias?: number;
   momioMinimo?: number;
   montoMinimo?: number;
+  multiplicador?: number;
   activo: boolean;
   notas?: string;
   tiers: { depositoMin: number; depositoMax?: number; bonoMonto: number }[];
@@ -248,9 +249,17 @@ export async function accionListReglasBono(casinoId: string) {
   const actor = await adminOrThrow();
   const reglas = await listReglasBonoPorCasino(actor, casinoId);
   return reglas.map((r) => ({
-    ...r,
+    id: r.id,
+    casinoId: r.casinoId,
+    nombre: r.nombre,
+    tipo: r.tipo,
+    diaCorteMes: r.diaCorteMes,
+    cadaDias: r.cadaDias,
+    activo: r.activo,
+    notas: r.notas,
     momioMinimo: r.momioMinimo ? r.momioMinimo.toNumber() : null,
     montoMinimo: r.montoMinimo ? r.montoMinimo.toNumber() : null,
+    multiplicador: r.multiplicador ? r.multiplicador.toNumber() : null,
     tiers: r.tiers.map((t) => ({
       id: t.id,
       depositoMin: t.depositoMin.toNumber(),

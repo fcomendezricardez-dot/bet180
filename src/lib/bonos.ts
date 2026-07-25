@@ -16,6 +16,8 @@ const ReglaBonoSchema = z.object({
   cadaDias: z.number().int().positive().optional(),
   momioMinimo: z.number().positive().optional(),
   montoMinimo: z.number().nonnegative().optional(),
+  /// si se define, el bono = monto × multiplicador (ej. 2 = el doble) en vez de usar la tabla de tiers
+  multiplicador: z.number().positive().optional(),
   activo: z.boolean().default(true),
   notas: z.string().optional(),
   tiers: z.array(TierSchema).default([]),
@@ -34,6 +36,7 @@ export async function crearReglaBono(actor: Actor, input: z.infer<typeof ReglaBo
       cadaDias: data.cadaDias,
       momioMinimo: data.momioMinimo,
       montoMinimo: data.montoMinimo,
+      multiplicador: data.multiplicador,
       activo: data.activo,
       notas: data.notas,
       tiers: { create: data.tiers },
@@ -133,6 +136,7 @@ export async function bonosDisponibles(actor: Actor) {
         nombre: r.nombre,
         tipo: r.tipo,
         casino: r.casino,
+        multiplicador: r.multiplicador ? r.multiplicador.toNumber() : null,
         tiers: r.tiers.map((t) => ({
           id: t.id,
           depositoMin: t.depositoMin.toNumber(),
@@ -158,18 +162,24 @@ export async function registrarReclamoBono(actor: Actor, input: z.infer<typeof R
   });
   assertLetraAccess(actor, regla.casino.letra);
 
-  const tier = regla.tiers.find(
-    (t) => data.monto >= t.depositoMin.toNumber() && (t.depositoMax === null || data.monto <= t.depositoMax.toNumber()),
-  );
-  if (!tier) {
-    throw new Error("El monto no corresponde a ningún tier configurado para este bono.");
+  let bonoOtorgado: number;
+  if (regla.multiplicador) {
+    bonoOtorgado = data.monto * regla.multiplicador.toNumber();
+  } else {
+    const tier = regla.tiers.find(
+      (t) => data.monto >= t.depositoMin.toNumber() && (t.depositoMax === null || data.monto <= t.depositoMax.toNumber()),
+    );
+    if (!tier) {
+      throw new Error("El monto no corresponde a ningún tier configurado para este bono.");
+    }
+    bonoOtorgado = tier.bonoMonto.toNumber();
   }
 
   return prisma.bonoReclamo.create({
     data: {
       reglaId: data.reglaId,
       monto: data.monto,
-      bonoOtorgado: tier.bonoMonto,
+      bonoOtorgado,
       registradoPor: actor.rol === "ADMIN" ? "admin" : `operador.${actor.letra}`,
     },
   });
