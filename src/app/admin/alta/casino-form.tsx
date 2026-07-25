@@ -37,6 +37,7 @@ export function CasinoForm() {
   const [statusPerfil, setStatusPerfil] = useState<"VERIFICADO" | "EN_PROCESO" | "SIN_VERIFICACION">("SIN_VERIFICACION");
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [requiereMismoCliente, setRequiereMismoCliente] = useState(false);
   const [cobraEnId, setCobraEnId] = useState("");
   const [cuentasLetraFetched, setCuentasLetraFetched] = useState<{ id: string; banco: string; perfil: string }[]>([]);
   const cuentasLetra = letra.trim() ? cuentasLetraFetched : [];
@@ -81,6 +82,7 @@ export function CasinoForm() {
     setStatusPerfil("SIN_VERIFICACION");
     setUsuario("");
     setContrasena("");
+    setRequiereMismoCliente(false);
     setCobraEnId("");
     setNota("");
     setMensaje(null);
@@ -101,6 +103,7 @@ export function CasinoForm() {
       setStatusPerfil(c.statusPerfil);
       setUsuario(c.usuario ?? "");
       setContrasena(c.contrasena ?? "");
+      setRequiereMismoCliente(c.requiereMismoCliente);
       setCobraEnId(c.cobraEnId ?? "");
       setNota(c.nota ?? "");
       setBuscarQuery("");
@@ -118,6 +121,7 @@ export function CasinoForm() {
       statusPerfil,
       usuario: usuario || undefined,
       contrasena: contrasena || undefined,
+      requiereMismoCliente,
       cobraEnId: cobraEnId || undefined,
       nota: nota || undefined,
     };
@@ -245,6 +249,14 @@ export function CasinoForm() {
           <input className={inputClass} value={contrasena} onChange={(e) => setContrasena(e.target.value)} />
         </label>
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={requiereMismoCliente}
+          onChange={(e) => setRequiereMismoCliente(e.target.checked)}
+        />
+        Requiere que los depósitos sean del banco del mismo cliente (muestra advertencia en Nuevo Movimiento)
+      </label>
       <label className={labelClass}>
         Nota
         <textarea className={inputClass} value={nota} onChange={(e) => setNota(e.target.value)} />

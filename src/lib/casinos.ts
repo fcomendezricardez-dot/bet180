@@ -30,6 +30,7 @@ const CrearCasinoSchema = z.object({
   statusPerfil: z.enum(["VERIFICADO", "EN_PROCESO", "SIN_VERIFICACION"]).default("SIN_VERIFICACION"),
   usuario: z.string().optional(),
   contrasena: z.string().optional(),
+  requiereMismoCliente: z.boolean().optional(),
   cobraEnId: z.string().optional(),
   nota: z.string().optional(),
 });

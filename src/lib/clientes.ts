@@ -3,6 +3,61 @@ import { type Actor, assertAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { calcularSaldoCasino, calcularSaldoCuenta } from "@/lib/saldos";
 
+/**
+ * Arqueo: para cada banco del cliente, su historial de movimientos con saldo
+ * corriente (solo los CONFIRMADO afectan el saldo; pendiente/cancelado se
+ * muestran pero no cuentan). Solo ADMIN.
+ */
+export async function arqueoCliente(actor: Actor, clienteId: string) {
+  assertAdmin(actor);
+
+  const cliente = await prisma.cliente.findUniqueOrThrow({
+    where: { id: clienteId },
+    include: { cuentas: true },
+  });
+
+  const bancos = await Promise.all(
+    cliente.cuentas.map(async (cuenta) => {
+      const movimientos = await prisma.movimiento.findMany({
+        where: {
+          OR: [{ cuentaId: cuenta.id }, { casinoUOrigen: cuenta.id, tipo: "RETIRO" }],
+        },
+        orderBy: { fecha: "asc" },
+      });
+
+      let saldo = cuenta.saldoInicial;
+      const historial = movimientos.map((m) => {
+        const esEntradaPrestamo = m.cuentaId !== cuenta.id && m.casinoUOrigen === cuenta.id;
+        if (m.estado === "CONFIRMADO") {
+          saldo = esEntradaPrestamo || m.tipo === "DEPOSITO" ? saldo.plus(m.monto) : saldo.minus(m.monto);
+        }
+        return {
+          id: m.id,
+          fecha: m.fecha,
+          tipoMovimiento: m.tipoMovimiento,
+          tipo: m.tipo,
+          monto: m.monto.toNumber(),
+          estado: m.estado,
+          concepto: m.concepto,
+          saldoDespues: saldo.toNumber(),
+        };
+      });
+
+      return {
+        id: cuenta.id,
+        banco: cuenta.banco,
+        letra: cuenta.letra,
+        perfil: cuenta.perfil,
+        saldoInicial: cuenta.saldoInicial.toNumber(),
+        saldoActual: (await calcularSaldoCuenta(cuenta.id)).toNumber(),
+        movimientos: historial,
+      };
+    }),
+  );
+
+  return { cliente: { id: cliente.id, nombreCompleto: cliente.nombreCompleto }, bancos };
+}
+
 /** Busca clientes por nombre o ID (catálogo completo, solo ADMIN). */
 export async function buscarClientes(actor: Actor, query: string) {
   assertAdmin(actor);
@@ -51,11 +106,53 @@ export async function obtenerFichaCliente(actor: Actor, id: string) {
   return { cliente, cuentas: cuentasConSaldo, casinos: casinosConSaldo };
 }
 
-function parsearEquipo(equipo: string | null): { letra: string; perfil: string } | null {
+export function parsearEquipo(equipo: string | null): { letra: string; perfil: string } | null {
   if (!equipo) return null;
   const partes = equipo.split("-");
   if (partes.length !== 2) return null;
   return { letra: partes[0].toUpperCase(), perfil: partes[1] };
+}
+
+/**
+ * Busca clientes por nombre o ID y resuelve en qué letra.perfil está jugando
+ * cada uno ahora mismo (vía `equipo`, o si no está definido, vía su cuenta
+ * vinculada). Disponible para ADMIN y OPERADOR (el operador solo ve los de su
+ * propia letra) — a diferencia de buscarClientes, que es la ficha completa y
+ * es solo ADMIN.
+ */
+export async function buscarClientesOperativo(actor: Actor, query: string) {
+  if (!query.trim()) return [];
+
+  const clientes = await prisma.cliente.findMany({
+    where: {
+      OR: [
+        { nombreCompleto: { contains: query.trim(), mode: "insensitive" } },
+        { id: { contains: query.trim(), mode: "insensitive" } },
+      ],
+    },
+    select: {
+      id: true,
+      nombreCompleto: true,
+      status: true,
+      equipo: true,
+      cuentas: { select: { letra: true, perfil: true }, take: 1 },
+    },
+    orderBy: { nombreCompleto: "asc" },
+    take: 20,
+  });
+
+  return clientes
+    .map((c) => {
+      const letraPerfil = parsearEquipo(c.equipo) ?? (c.cuentas[0] ?? null);
+      return {
+        id: c.id,
+        nombreCompleto: c.nombreCompleto,
+        status: c.status,
+        letra: letraPerfil?.letra ?? null,
+        perfil: letraPerfil?.perfil ?? null,
+      };
+    })
+    .filter((c) => actor.rol === "ADMIN" || c.letra === actor.letra);
 }
 
 /** Ficha de un cliente para editar sus datos (sin cuentas/casinos). Solo ADMIN. */

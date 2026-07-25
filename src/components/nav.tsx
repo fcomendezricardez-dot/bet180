@@ -14,6 +14,7 @@ const ADMIN_LINKS = [
   { href: "/admin/reportes", label: "Reportes" },
   { href: "/admin/tarjetas", label: "Tarjetas" },
   { href: "/admin/clientes", label: "Buscador Clientes" },
+  { href: "/admin/arqueo", label: "Arqueo" },
 ];
 
 export async function Nav() {

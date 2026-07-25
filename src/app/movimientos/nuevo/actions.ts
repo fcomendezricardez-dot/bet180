@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { registrarApuesta } from "@/lib/apuestas";
 import { type Actor } from "@/lib/authz";
+import { buscarClientesOperativo } from "@/lib/clientes";
 import {
   registrarDepositoACasino,
   registrarGastoOperativo,
@@ -23,20 +24,26 @@ function letraWhere(actor: Actor, letra?: string) {
   return letra;
 }
 
-/** Paso 1: buscar casinos activos por perfil (para elegir dónde depositar/retirar/apostar). */
-export async function buscarCasinosPorPerfil(perfil: string) {
+/**
+ * Paso 1: buscar clientes por nombre o ID y resolver en qué letra.perfil está
+ * jugando cada uno ahora mismo. Reemplaza la búsqueda manual por perfil: un
+ * perfil puede quedar activo pero reasignado a otro cliente, así que buscar
+ * por cliente evita confundir de quién es la sesión.
+ */
+export async function buscarClientesParaMovimiento(query: string) {
   const actor = await actorOrThrow();
-  if (!perfil.trim()) return [];
+  return buscarClientesOperativo(actor, query);
+}
+
+/** Casinos activos de una letra.perfil exacta (para elegir dónde depositar/apostar). */
+export async function buscarCasinosPorLetraYPerfil(letra: string, perfil: string) {
+  const actor = await actorOrThrow();
+  if (actor.rol === "OPERADOR" && actor.letra !== letra) return [];
 
   const casinos = await prisma.casino.findMany({
-    where: {
-      perfil: { contains: perfil.trim(), mode: "insensitive" },
-      statusCasino: "ACTIVO",
-      letra: letraWhere(actor),
-    },
+    where: { letra, perfil, statusCasino: "ACTIVO" },
     include: { cobraEn: { select: { id: true, banco: true, letra: true, perfil: true } } },
-    orderBy: [{ letra: "asc" }, { perfil: "asc" }],
-    take: 20,
+    orderBy: { nombreCasino: "asc" },
   });
 
   return Promise.all(
@@ -47,6 +54,7 @@ export async function buscarCasinosPorPerfil(perfil: string) {
       nombreCasino: c.nombreCasino,
       usuario: c.usuario,
       contrasena: c.contrasena,
+      requiereMismoCliente: c.requiereMismoCliente,
       cobraEn: c.cobraEn,
       saldo: (await calcularSaldoCasino(c.id)).toNumber(),
     })),
@@ -84,6 +92,8 @@ export async function buscarCuentasPorPerfil(perfil: string) {
         contrasena: c.contrasena,
         token: c.token,
         nip: c.nip,
+        idCliente: c.idCliente,
+        nombreCliente: c.nombreCliente,
         saldo: saldo.toNumber(),
         pendientes,
       };

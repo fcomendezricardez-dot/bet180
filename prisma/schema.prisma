@@ -186,6 +186,9 @@ model Casino {
   usuario    String?
   contrasena String?
 
+  /// si es true, un depósito a este casino debe venir del banco del mismo cliente (solo advertencia, no bloquea)
+  requiereMismoCliente Boolean @default(false) @map("requiere_mismo_cliente")
+
   /// cuenta bancaria donde se retira ese casino
   cobraEnId String?
   cobraEn   Cuenta? @relation("CasinoCobraEnCuenta", fields: [cobraEnId], references: [id])

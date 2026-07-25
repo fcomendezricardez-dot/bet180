@@ -6,12 +6,14 @@ import {
   accionRegistrarGastoOperativo,
   accionRegistrarMovimientoBancario,
   accionRegistrarPrestamo,
-  buscarCasinosPorPerfil,
+  buscarCasinosPorLetraYPerfil,
+  buscarClientesParaMovimiento,
   buscarCuentasPorPerfil,
   widgetDisponibilidad,
 } from "./actions";
 
-type Casino = Awaited<ReturnType<typeof buscarCasinosPorPerfil>>[number];
+type Cliente = Awaited<ReturnType<typeof buscarClientesParaMovimiento>>[number];
+type Casino = Awaited<ReturnType<typeof buscarCasinosPorLetraYPerfil>>[number];
 type Cuenta = Awaited<ReturnType<typeof buscarCuentasPorPerfil>>[number];
 type Disponible = Awaited<ReturnType<typeof widgetDisponibilidad>>[number];
 
@@ -54,9 +56,24 @@ export function NuevoMovimientoForm({ disponibilidadInicial }: { disponibilidadI
     setDisponibilidad(await widgetDisponibilidad());
   }
 
-  // --- Paso 1: buscar casino ---
-  const casinoBuscador = useBuscador(buscarCasinosPorPerfil);
+  // --- Paso 1: buscar cliente (resuelve solo en qué letra.perfil está jugando) ---
+  const clienteBuscador = useBuscador(buscarClientesParaMovimiento);
+  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [casinosDelPerfil, setCasinosDelPerfil] = useState<Casino[]>([]);
   const [casino, setCasino] = useState<Casino | null>(null);
+
+  const letraCliente = cliente?.letra;
+  const perfilCliente = cliente?.perfil;
+  useEffect(() => {
+    if (!letraCliente || !perfilCliente) return;
+    let cancelado = false;
+    buscarCasinosPorLetraYPerfil(letraCliente, perfilCliente).then((data) => {
+      if (!cancelado) setCasinosDelPerfil(data);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [letraCliente, perfilCliente]);
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
@@ -69,23 +86,67 @@ export function NuevoMovimientoForm({ disponibilidadInicial }: { disponibilidadI
         </div>
 
         <section>
-          <h2 className="mb-2 text-lg font-semibold text-slate-900">1. Buscar Casino</h2>
+          <h2 className="mb-2 text-lg font-semibold text-slate-900">1. Buscar Cliente</h2>
           <input
             type="text"
-            placeholder="Perfil, ej. 101"
-            className="w-full max-w-xs rounded border border-slate-300 px-3 py-2 text-sm"
-            value={casinoBuscador.query}
+            placeholder="Nombre o ID del cliente (ej. CL0013)"
+            className="w-full max-w-md rounded border border-slate-300 px-3 py-2 text-sm"
+            value={clienteBuscador.query}
             onChange={(e) => {
-              casinoBuscador.setQuery(e.target.value);
+              clienteBuscador.setQuery(e.target.value);
+              setCliente(null);
               setCasino(null);
             }}
           />
-          {casinoBuscador.resultados.length > 0 && !casino && (
-            <div className="mt-2 overflow-x-auto rounded border border-slate-200">
+          {clienteBuscador.resultados.length > 0 && !cliente && (
+            <ul className="mt-2 max-w-md divide-y divide-slate-100 rounded border border-slate-200 bg-white">
+              {clienteBuscador.resultados.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => setCliente(c)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  >
+                    <span className="block font-medium text-slate-900">{c.nombreCompleto}</span>
+                    <span className="block text-xs text-slate-400">
+                      {c.id} {c.letra && c.perfil ? `· juega en ${c.letra}.${c.perfil}` : "· sin perfil asignado"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {cliente && (
+            <div className="mt-2 flex items-center justify-between rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
+              <span>
+                Cliente: <strong>{cliente.nombreCompleto}</strong> ({cliente.id})
+                {cliente.letra && cliente.perfil ? (
+                  <>
+                    {" "}
+                    — juega en <strong>{cliente.letra}.{cliente.perfil}</strong>
+                  </>
+                ) : (
+                  <span className="text-amber-700"> — sin perfil asignado (revisa Gestión)</span>
+                )}
+              </span>
+              <button
+                type="button"
+                className="text-emerald-700 underline"
+                onClick={() => {
+                  setCliente(null);
+                  setCasino(null);
+                }}
+              >
+                Cambiar
+              </button>
+            </div>
+          )}
+
+          {cliente?.letra && !casino && casinosDelPerfil.length > 0 && (
+            <div className="mt-3 overflow-x-auto rounded border border-slate-200">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left text-slate-500">
                   <tr>
-                    <th className="px-3 py-2">Perfil</th>
                     <th className="px-3 py-2">Casino</th>
                     <th className="px-3 py-2">Saldo</th>
                     <th className="px-3 py-2">Usuario</th>
@@ -95,11 +156,8 @@ export function NuevoMovimientoForm({ disponibilidadInicial }: { disponibilidadI
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {casinoBuscador.resultados.map((c) => (
+                  {casinosDelPerfil.map((c) => (
                     <tr key={c.id}>
-                      <td className="px-3 py-2">
-                        {c.letra}.{c.perfil}
-                      </td>
                       <td className="px-3 py-2">{c.nombreCasino}</td>
                       <td className="px-3 py-2">{money(c.saldo)}</td>
                       <td className="px-3 py-2">{c.usuario ?? "—"}</td>
@@ -119,6 +177,9 @@ export function NuevoMovimientoForm({ disponibilidadInicial }: { disponibilidadI
                 </tbody>
               </table>
             </div>
+          )}
+          {cliente?.letra && casinosDelPerfil.length === 0 && !casino && (
+            <p className="mt-2 text-sm text-slate-400">Este perfil no tiene casinos activos.</p>
           )}
           {casino && (
             <div className="mt-2 flex items-center justify-between rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
@@ -143,6 +204,7 @@ export function NuevoMovimientoForm({ disponibilidadInicial }: { disponibilidadI
 
         <MovimientoBancarioSeccion
           casinoSugerido={casino}
+          clienteActual={cliente}
           onFocus={() => setActivo("deposito")}
           onDone={() => {
             setActivo(null);
@@ -305,6 +367,7 @@ function TablaAccesoCuenta({ cuenta }: { cuenta: Cuenta }) {
           </span>
         )}
       </p>
+      <p>Cliente dueño: {cuenta.nombreCliente ?? "sin cliente asignado"}</p>
       <p>CLABE: {cuenta.clabe ?? "—"}</p>
       <p>Usuario: {cuenta.usuario ?? "—"} · Contraseña: {cuenta.contrasena ?? "—"}</p>
       <p>Token: {cuenta.token ?? "—"} · NIP: {cuenta.nip ?? "—"}</p>
@@ -316,11 +379,21 @@ function BuscadorCuenta({
   buscador,
   cuenta,
   setCuenta,
+  clienteActualId,
 }: {
   buscador: ReturnType<typeof useBuscador<Cuenta>>;
   cuenta: Cuenta | null;
   setCuenta: (c: Cuenta | null) => void;
+  clienteActualId?: string | null;
 }) {
+  const resultados = clienteActualId
+    ? [...buscador.resultados].sort((a, b) => {
+        const aMismo = a.idCliente === clienteActualId ? 0 : 1;
+        const bMismo = b.idCliente === clienteActualId ? 0 : 1;
+        return aMismo - bMismo;
+      })
+    : buscador.resultados;
+
   return (
     <div>
       <input
@@ -333,24 +406,33 @@ function BuscadorCuenta({
           setCuenta(null);
         }}
       />
-      {buscador.resultados.length > 0 && !cuenta && (
+      {resultados.length > 0 && !cuenta && (
         <div className="mt-2 overflow-x-auto rounded border border-slate-200">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
                 <th className="px-3 py-2">Perfil</th>
                 <th className="px-3 py-2">Banco</th>
+                <th className="px-3 py-2">Cliente</th>
                 <th className="px-3 py-2">Disponible</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {buscador.resultados.map((c) => (
+              {resultados.map((c) => (
                 <tr key={c.id}>
                   <td className="px-3 py-2">
                     {c.letra}.{c.perfil}
                   </td>
                   <td className="px-3 py-2">{c.banco}</td>
+                  <td className="px-3 py-2">
+                    {c.nombreCliente ?? "—"}
+                    {clienteActualId && c.idCliente === clienteActualId && (
+                      <span className="ml-1 rounded bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">
+                        mismo cliente
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">{money(c.saldo)}</td>
                   <td className="px-3 py-2">
                     <button
@@ -374,16 +456,24 @@ function BuscadorCuenta({
 
 function MovimientoBancarioSeccion({
   casinoSugerido,
+  clienteActual,
   onFocus,
   onDone,
 }: {
   casinoSugerido: Casino | null;
+  clienteActual: Cliente | null;
   onFocus: () => void;
   onDone: () => void;
 }) {
   const [tipo, setTipo] = useState<"DEPOSITO_A_CASINO" | "RETIRO_DE_CASINO">("DEPOSITO_A_CASINO");
   const buscador = useBuscador(buscarCuentasPorPerfil);
   const [cuenta, setCuenta] = useState<Cuenta | null>(null);
+  const otroCliente =
+    tipo === "DEPOSITO_A_CASINO" &&
+    casinoSugerido?.requiereMismoCliente &&
+    cuenta &&
+    clienteActual &&
+    cuenta.idCliente !== clienteActual.id;
   const [monto, setMonto] = useState("");
   const [concepto, setConcepto] = useState("");
   const [estado, setEstado] = useState<"CONFIRMADO" | "PENDIENTE" | "CANCELADO">("CONFIRMADO");
@@ -428,7 +518,18 @@ function MovimientoBancarioSeccion({
             <option value="DEPOSITO_A_CASINO">Depósito a Casino</option>
             <option value="RETIRO_DE_CASINO">Retiro de Casino</option>
           </select>
-          <BuscadorCuenta buscador={buscador} cuenta={cuenta} setCuenta={setCuenta} />
+          <BuscadorCuenta
+            buscador={buscador}
+            cuenta={cuenta}
+            setCuenta={setCuenta}
+            clienteActualId={clienteActual?.id}
+          />
+          {otroCliente && (
+            <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              ⚠ Este casino requiere que el depósito venga del banco del mismo cliente ({clienteActual?.nombreCompleto}).
+              Esta cuenta pertenece a: {cuenta?.nombreCliente ?? "sin cliente asignado"}.
+            </p>
+          )}
           {cuenta && (
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <label className="text-sm">
