@@ -8,6 +8,10 @@ type Reclamo = Awaited<ReturnType<typeof accionReclamosConRolloverPendiente>>[nu
 const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
 const fecha = (d: Date | string) => new Intl.DateTimeFormat("es-MX").format(new Date(d));
 
+function etiquetaCasino(casino: { nombreCasino: string; perfil: string }) {
+  return `${casino.nombreCasino.slice(0, 4)}${casino.perfil}`;
+}
+
 export function RolloverPendiente() {
   const [reclamos, setReclamos] = useState<Reclamo[]>([]);
   const [cargado, setCargado] = useState(false);
@@ -58,10 +62,8 @@ export function RolloverPendiente() {
               return (
                 <tr key={r.id}>
                   <td className="px-3 py-2">
-                    {r.casino.nombreCasino}{" "}
-                    <span className="text-xs text-slate-400">
-                      ({r.casino.letra}.{r.casino.perfil})
-                    </span>
+                    <span className="font-medium">{etiquetaCasino(r.casino)}</span>
+                    <span className="block text-xs text-slate-400">{r.cliente?.nombreCompleto ?? "sin cliente asignado"}</span>
                   </td>
                   <td className="px-3 py-2">{r.nombreRegla}</td>
                   <td className="px-3 py-2 text-xs text-slate-500">{fecha(r.fecha)}</td>

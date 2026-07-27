@@ -117,6 +117,24 @@ export function parsearEquipo(equipo: string | null): { letra: string; perfil: s
 }
 
 /**
+ * Dado un letra.perfil (ej. de un casino), resuelve qué cliente lo tiene
+ * asignado ahora mismo — la búsqueda inversa de parsearEquipo. Primero
+ * intenta por el campo `equipo`, y si no, por sus cuentas bancarias.
+ */
+export async function clientePorLetraPerfil(letra: string, perfil: string) {
+  const porEquipo = await prisma.cliente.findFirst({
+    where: { equipo: { equals: `${letra.toLowerCase()}-${perfil}`, mode: "insensitive" } },
+    select: { id: true, nombreCompleto: true },
+  });
+  if (porEquipo) return porEquipo;
+
+  return prisma.cliente.findFirst({
+    where: { cuentas: { some: { letra, perfil } } },
+    select: { id: true, nombreCompleto: true },
+  });
+}
+
+/**
  * Busca clientes por nombre o ID y resuelve en qué letra.perfil está jugando
  * cada uno ahora mismo (vía `equipo`, o si no está definido, vía su cuenta
  * vinculada). Disponible para ADMIN y OPERADOR (el operador solo ve los de su

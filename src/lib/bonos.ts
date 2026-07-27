@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { type Actor, assertAdmin, assertLetraAccess } from "@/lib/authz";
+import { clientePorLetraPerfil } from "@/lib/clientes";
 import { prisma } from "@/lib/prisma";
 
 const TierSchema = z.object({
@@ -133,8 +134,16 @@ export async function bonosDisponibles(actor: Actor) {
     },
   });
 
-  return reglas
-    .map((r) => {
+  const clientesPorCasino = new Map<string, { id: string; nombreCompleto: string } | null>();
+  async function clienteDe(casino: { id: string; letra: string; perfil: string }) {
+    if (!clientesPorCasino.has(casino.id)) {
+      clientesPorCasino.set(casino.id, await clientePorLetraPerfil(casino.letra, casino.perfil));
+    }
+    return clientesPorCasino.get(casino.id) ?? null;
+  }
+
+  const resultado = await Promise.all(
+    reglas.map(async (r) => {
       const ultimoReclamo = r.reclamos[0]?.fecha ?? null;
       const { disponible, proximaFecha } = calcularDisponibilidad(r, ultimoReclamo);
       return {
@@ -142,6 +151,7 @@ export async function bonosDisponibles(actor: Actor) {
         nombre: r.nombre,
         tipo: r.tipo,
         casino: r.casino,
+        cliente: await clienteDe(r.casino),
         multiplicador: r.multiplicador ? r.multiplicador.toNumber() : null,
         depositoMinimo: r.depositoMinimo ? r.depositoMinimo.toNumber() : null,
         bonoMaximo: r.bonoMaximo ? r.bonoMaximo.toNumber() : null,
@@ -156,8 +166,10 @@ export async function bonosDisponibles(actor: Actor) {
         disponible,
         proximaFecha,
       };
-    })
-    .sort((a, b) => Number(b.disponible) - Number(a.disponible));
+    }),
+  );
+
+  return resultado.sort((a, b) => Number(b.disponible) - Number(a.disponible));
 }
 
 const ReclamoSchema = z.object({ reglaId: z.number().int(), monto: z.number().positive() });
@@ -270,10 +282,12 @@ export async function reclamosConRolloverPendiente(actor: Actor) {
     reclamos.map(async (r) => {
       const progreso = await calcularProgresoRollover(r.id);
       const requerido = r.rolloverRequerido!.toNumber();
+      const cliente = await clientePorLetraPerfil(r.regla.casino.letra, r.regla.casino.perfil);
       return {
         id: r.id,
         nombreRegla: r.regla.nombre,
         casino: r.regla.casino,
+        cliente,
         fecha: r.fecha,
         monto: r.monto.toNumber(),
         bonoOtorgado: r.bonoOtorgado.toNumber(),

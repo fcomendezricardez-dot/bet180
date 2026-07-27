@@ -8,6 +8,10 @@ type Bono = Awaited<ReturnType<typeof accionBonosDisponibles>>[number];
 const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
 const fecha = (d: Date | string) => new Intl.DateTimeFormat("es-MX").format(new Date(d));
 
+function etiquetaCasino(casino: { nombreCasino: string; perfil: string }) {
+  return `${casino.nombreCasino.slice(0, 4)}${casino.perfil}`;
+}
+
 const TIPO_LABEL: Record<Bono["tipo"], string> = {
   DEPOSITO_MES: "Primer depósito del mes",
   CADA_N_DIAS: "Cada N días",
@@ -99,6 +103,8 @@ export function BonosDisponibles() {
     return (
       b.casino.nombreCasino.toLowerCase().includes(q) ||
       b.nombre.toLowerCase().includes(q) ||
+      (b.cliente?.nombreCompleto.toLowerCase().includes(q) ?? false) ||
+      etiquetaCasino(b.casino).toLowerCase().includes(q) ||
       `${b.casino.letra}.${b.casino.perfil}`.toLowerCase().includes(q)
     );
   });
@@ -108,7 +114,7 @@ export function BonosDisponibles() {
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
-          placeholder="Buscar por casino o perfil (ej. Codere, A.101)"
+          placeholder="Buscar por cliente, casino o cuenta (ej. Juan Pérez, Code101)"
           className="w-full max-w-sm rounded border border-slate-300 px-3 py-2 text-sm"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -137,7 +143,8 @@ export function BonosDisponibles() {
           {visibles.map((b) => (
             <tr key={b.id}>
               <td className="px-3 py-2">
-                {b.casino.nombreCasino} <span className="text-xs text-slate-400">({b.casino.letra}.{b.casino.perfil})</span>
+                <span className="font-medium">{etiquetaCasino(b.casino)}</span>
+                <span className="block text-xs text-slate-400">{b.cliente?.nombreCompleto ?? "sin cliente asignado"}</span>
               </td>
               <td className="px-3 py-2">
                 {b.nombre} <span className="text-xs text-slate-400">({TIPO_LABEL[b.tipo]})</span>
