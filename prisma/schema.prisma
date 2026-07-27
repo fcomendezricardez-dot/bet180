@@ -17,6 +17,8 @@ datasource db {
 enum Rol {
   ADMIN
   OPERADOR
+  /// resuelve incidencias de cuentas existentes y agenda apertura de cuentas nuevas
+  GESTOR
 }
 
 model Usuario {
@@ -25,11 +27,14 @@ model Usuario {
   password  String
   nombre    String
   rol       Rol
-  // Letra asignada al operador (A, B, C...). Null para ADMIN (ve todas).
+  // Letra asignada al operador (A, B, C...). Null para ADMIN/GESTOR (ven todas).
   letra     String?
   activo    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  seguimientosAsignados Seguimiento[]
+  aperturasAsignadas    Apertura[]
 
   @@map("usuarios")
 }
@@ -95,6 +100,7 @@ model Cuenta {
   movimientos       Movimiento[]
   casinosCobranAqui Casino[]     @relation("CasinoCobraEnCuenta")
   saldosDiarios     SaldoDiario[]
+  seguimientos      Seguimiento[]
 
   @@index([letra])
   @@index([status])
@@ -166,7 +172,9 @@ model Cliente {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  cuentas Cuenta[]
+  cuentas      Cuenta[]
+  seguimientos Seguimiento[]
+  aperturas    Apertura[]
 
   @@index([nombreCompleto])
   @@map("clientes")
@@ -216,8 +224,9 @@ model Casino {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  apuestas   Apuesta[]
-  reglasBono ReglaBono[]
+  apuestas     Apuesta[]
+  reglasBono   ReglaBono[]
+  seguimientos Seguimiento[]
 
   @@index([letra])
   @@index([statusCasino])
@@ -435,4 +444,92 @@ model BonoReclamo {
 
   @@index([reglaId])
   @@map("bono_reclamos")
+}
+
+// ---------------------------------------------------------------------------
+// Seguimiento (incidencias/trámites de clientes existentes) y Aperturas
+// (agenda de cuentas nuevas por abrir) — pantallas del rol Gestor.
+// ---------------------------------------------------------------------------
+
+enum PrioridadSeguimiento {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+enum EstadoSeguimiento {
+  PENDIENTE
+  COMPLETADO
+}
+
+model Seguimiento {
+  id        Int                  @id @default(autoincrement())
+  titulo    String
+  /// categoría libre (ej. "Falta de fotos", "Banco bloqueado", "Actualizar INE")
+  tipo      String
+  prioridad PrioridadSeguimiento @default(MEDIA)
+  estado    EstadoSeguimiento    @default(PENDIENTE)
+
+  clienteId String?  @map("cliente_id")
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+
+  responsableId String?  @map("responsable_id")
+  responsable   Usuario? @relation(fields: [responsableId], references: [id])
+
+  fechaEntrega DateTime? @map("fecha_entrega")
+
+  casinoInvolucradoId String? @map("casino_involucrado_id")
+  casinoInvolucrado   Casino? @relation(fields: [casinoInvolucradoId], references: [id])
+
+  bancoInvolucradoId String? @map("banco_involucrado_id")
+  bancoInvolucrado   Cuenta? @relation(fields: [bancoInvolucradoId], references: [id])
+
+  cantidadInvolucrada Decimal? @map("cantidad_involucrada") @db.Decimal(14, 2)
+
+  notas     String?
+  creadoPor String  @map("creado_por")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([estado])
+  @@index([clienteId])
+  @@index([responsableId])
+  @@index([fechaEntrega])
+  @@map("seguimientos")
+}
+
+enum EstadoApertura {
+  AGENDADA
+  REALIZADA
+  CANCELADA
+}
+
+model Apertura {
+  id            Int    @id @default(autoincrement())
+  nombreCliente String @map("nombre_cliente")
+  telefono      String?
+  letra         String?
+
+  clienteId String?  @map("cliente_id")
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+
+  /// qué se va a abrir (ej. "Codere", "Santander")
+  bancoOCasino String @map("banco_o_casino")
+
+  fechaCita DateTime @map("fecha_cita")
+
+  responsableId String?  @map("responsable_id")
+  responsable   Usuario? @relation(fields: [responsableId], references: [id])
+
+  notas  String?
+  estado EstadoApertura @default(AGENDADA)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([estado])
+  @@index([fechaCita])
+  @@index([clienteId])
+  @@map("aperturas")
 }

@@ -16,14 +16,31 @@ const ADMIN_LINKS = [
   { href: "/admin/arqueo", label: "Arqueo" },
   { href: "/admin/atencion", label: "Punto de Atención" },
   { href: "/admin/bonos", label: "Bonos" },
+  { href: "/admin/seguimiento", label: "Seguimiento" },
+  { href: "/admin/aperturas", label: "Próx. Apertura" },
+  { href: "/admin/agenda", label: "Agenda" },
   { href: "/admin/usuarios", label: "Usuarios" },
+];
+
+const GESTOR_LINKS = [
+  { href: "/admin/alta", label: "Gestión (Alta/Edición)" },
+  { href: "/admin/clientes", label: "Buscador Clientes" },
+  { href: "/admin/atencion", label: "Punto de Atención" },
+  { href: "/admin/seguimiento", label: "Seguimiento" },
+  { href: "/admin/aperturas", label: "Próx. Apertura" },
+  { href: "/admin/agenda", label: "Agenda" },
 ];
 
 export async function Nav() {
   const session = await auth();
   if (!session?.user) return null;
 
-  const links = [...OPERATOR_LINKS, ...(session.user.rol === "ADMIN" ? ADMIN_LINKS : [])];
+  const links =
+    session.user.rol === "ADMIN"
+      ? [...OPERATOR_LINKS, ...ADMIN_LINKS]
+      : session.user.rol === "GESTOR"
+        ? GESTOR_LINKS
+        : OPERATOR_LINKS;
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -39,7 +56,11 @@ export async function Nav() {
         <div className="flex items-center gap-3 text-sm text-slate-500">
           <span>
             {session.user.name} ·{" "}
-            {session.user.rol === "ADMIN" ? "Admin" : `Letra ${session.user.letra}`}
+            {session.user.rol === "ADMIN"
+              ? "Admin"
+              : session.user.rol === "GESTOR"
+                ? "Gestor"
+                : `Letra ${session.user.letra}`}
           </span>
           <form
             action={async () => {

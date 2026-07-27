@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (session?.user?.rol !== "ADMIN") {
+  if (session?.user?.rol !== "ADMIN" && session?.user?.rol !== "GESTOR") {
     redirect("/");
   }
   return <>{children}</>;

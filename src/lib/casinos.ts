@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Actor, assertAdmin, assertLetraAccess } from "@/lib/authz";
+import { type Actor, assertGestion, assertLetraAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -35,9 +35,9 @@ const CrearCasinoSchema = z.object({
   nota: z.string().optional(),
 });
 
-/** Alta de casino nuevo (solo ADMIN, cualquier letra). */
+/** Alta de casino nuevo (ADMIN o GESTOR, cualquier letra). */
 export async function crearCasino(actor: Actor, input: z.infer<typeof CrearCasinoSchema>) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const data = CrearCasinoSchema.parse(input);
   return prisma.casino.create({ data: { ...data, statusCasino: "ACTIVO" } });
 }
@@ -48,13 +48,13 @@ const ActualizarCasinoSchema = CrearCasinoSchema.omit({ id: true })
     statusCasino: z.enum(["ACTIVO", "BLOQUEADO", "ALERTA"]).optional(),
   });
 
-/** Editar casino existente, incluyendo status (solo ADMIN, cualquier letra). */
+/** Editar casino existente, incluyendo status (ADMIN o GESTOR, cualquier letra). */
 export async function actualizarCasino(
   actor: Actor,
   id: string,
   input: z.infer<typeof ActualizarCasinoSchema>,
 ) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const data = ActualizarCasinoSchema.parse(input);
   return prisma.casino.update({ where: { id }, data });
 }

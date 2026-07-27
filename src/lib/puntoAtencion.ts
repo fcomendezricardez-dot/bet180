@@ -1,10 +1,10 @@
-import { type Actor, assertAdmin } from "@/lib/authz";
+import { type Actor, assertGestion } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { calcularFondeoCuentas } from "@/lib/fondeo";
 
 /** Clientes cuya INE ya venció o vence este año o el próximo. Solo ADMIN. */
 export async function vencimientosIne(actor: Actor) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const anioActual = new Date().getFullYear();
 
   const clientes = await prisma.cliente.findMany({
@@ -23,7 +23,7 @@ export async function vencimientosIne(actor: Actor) {
  * telefonía dé de baja el número si pasan de 5 meses sin recargar.
  */
 export async function proximosARecarga(actor: Actor) {
-  assertAdmin(actor);
+  assertGestion(actor);
 
   const clientes = await prisma.cliente.findMany({
     where: { ultRecarga: { not: null } },
@@ -42,6 +42,6 @@ export async function proximosARecarga(actor: Actor) {
 
 /** Cuentas activas con saldo promedio del mes por debajo del mínimo. Solo ADMIN. */
 export async function cuentasEnRiesgoDeFondeo(actor: Actor, minimo = 5000) {
-  assertAdmin(actor);
+  assertGestion(actor);
   return calcularFondeoCuentas(minimo);
 }

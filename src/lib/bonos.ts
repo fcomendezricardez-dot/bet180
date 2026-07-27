@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Actor, assertAdmin, assertLetraAccess } from "@/lib/authz";
+import { type Actor, assertAdmin, assertGestion, assertLetraAccess } from "@/lib/authz";
 import { clientePorLetraPerfil } from "@/lib/clientes";
 import { prisma } from "@/lib/prisma";
 
@@ -27,9 +27,9 @@ const ReglaBonoSchema = z.object({
   tiers: z.array(TierSchema).default([]),
 });
 
-/** Da de alta una regla de bono nueva para un casino, con su tabla de tiers. Solo ADMIN. */
+/** Da de alta una regla de bono nueva para un casino, con su tabla de tiers. ADMIN o GESTOR. */
 export async function crearReglaBono(actor: Actor, input: z.infer<typeof ReglaBonoSchema>) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const data = ReglaBonoSchema.parse(input);
   return prisma.reglaBono.create({
     data: {
@@ -53,13 +53,13 @@ export async function crearReglaBono(actor: Actor, input: z.infer<typeof ReglaBo
 
 const ActualizarReglaBonoSchema = ReglaBonoSchema.omit({ casinoId: true }).partial();
 
-/** Edita una regla existente; si se envían tiers, reemplaza la tabla completa. Solo ADMIN. */
+/** Edita una regla existente; si se envían tiers, reemplaza la tabla completa. ADMIN o GESTOR. */
 export async function actualizarReglaBono(
   actor: Actor,
   id: number,
   input: z.infer<typeof ActualizarReglaBonoSchema>,
 ) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const { tiers, ...resto } = ActualizarReglaBonoSchema.parse(input);
 
   return prisma.$transaction(async (tx) => {
@@ -73,9 +73,9 @@ export async function actualizarReglaBono(
   });
 }
 
-/** Elimina una regla de bono (y sus tiers/reclamos en cascada). Solo ADMIN. */
+/** Elimina una regla de bono (y sus tiers/reclamos en cascada). ADMIN o GESTOR. */
 export async function eliminarReglaBono(actor: Actor, id: number) {
-  assertAdmin(actor);
+  assertGestion(actor);
   return prisma.reglaBono.delete({ where: { id } });
 }
 

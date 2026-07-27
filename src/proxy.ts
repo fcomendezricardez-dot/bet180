@@ -3,6 +3,9 @@ import { auth } from "@/auth";
 
 const PUBLIC_PATHS = ["/login"];
 
+/** Subrutas de /admin exclusivas de ADMIN (no accesibles para GESTOR). */
+const ADMIN_ONLY_PATHS = ["/admin/status", "/admin/reportes", "/admin/arqueo", "/admin/bonos", "/admin/usuarios"];
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
@@ -20,8 +23,13 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname.startsWith("/admin") && req.auth.user.rol !== "ADMIN") {
-    return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+  if (pathname.startsWith("/admin")) {
+    const rol = req.auth.user.rol;
+    const esAdminOnly = ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p));
+    const permitido = rol === "ADMIN" || (rol === "GESTOR" && !esAdminOnly);
+    if (!permitido) {
+      return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+    }
   }
 
   return NextResponse.next();

@@ -18,7 +18,7 @@ export type UsuarioInput = {
   email: string;
   password: string;
   nombre: string;
-  rol: "ADMIN" | "OPERADOR";
+  rol: "ADMIN" | "OPERADOR" | "GESTOR";
   letra?: string;
   activo: boolean;
 };

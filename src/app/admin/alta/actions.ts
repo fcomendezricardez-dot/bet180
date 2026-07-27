@@ -23,7 +23,7 @@ async function adminOrThrow(): Promise<Actor> {
   const session = await auth();
   if (!session?.user) throw new Error("No autenticado.");
   const actor = { rol: session.user.rol, letra: session.user.letra };
-  if (actor.rol !== "ADMIN") throw new ForbiddenError();
+  if (actor.rol !== "ADMIN" && actor.rol !== "GESTOR") throw new ForbiddenError();
   return actor;
 }
 

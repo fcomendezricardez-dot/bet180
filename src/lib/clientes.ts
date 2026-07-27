@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Actor, assertAdmin } from "@/lib/authz";
+import { type Actor, assertAdmin, assertGestion } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { calcularSaldoCasino, calcularSaldoCuenta } from "@/lib/saldos";
 
@@ -58,9 +58,9 @@ export async function arqueoCliente(actor: Actor, clienteId: string) {
   return { cliente: { id: cliente.id, nombreCompleto: cliente.nombreCompleto }, bancos };
 }
 
-/** Busca clientes por nombre o ID (catálogo completo, solo ADMIN). */
+/** Busca clientes por nombre o ID (catálogo completo, ADMIN o GESTOR). */
 export async function buscarClientes(actor: Actor, query: string) {
-  assertAdmin(actor);
+  assertGestion(actor);
   if (!query.trim()) return [];
 
   return prisma.cliente.findMany({
@@ -78,7 +78,7 @@ export async function buscarClientes(actor: Actor, query: string) {
 
 /** Ficha completa de un cliente: datos personales + sus cuentas y casinos. */
 export async function obtenerFichaCliente(actor: Actor, id: string) {
-  assertAdmin(actor);
+  assertGestion(actor);
 
   const cliente = await prisma.cliente.findUniqueOrThrow({
     where: { id },
@@ -206,12 +206,12 @@ export async function buscarClientesOperativo(actor: Actor, query: string) {
         perfil: letraPerfil?.perfil ?? null,
       };
     })
-    .filter((c) => actor.rol === "ADMIN" || c.letra === actor.letra);
+    .filter((c) => actor.rol === "ADMIN" || actor.rol === "GESTOR" || c.letra === actor.letra);
 }
 
-/** Ficha de un cliente para editar sus datos (sin cuentas/casinos). Solo ADMIN. */
+/** Ficha de un cliente para editar sus datos (sin cuentas/casinos). ADMIN o GESTOR. */
 export async function getClienteParaEditar(actor: Actor, id: string) {
-  assertAdmin(actor);
+  assertGestion(actor);
   return prisma.cliente.findUniqueOrThrow({ where: { id } });
 }
 
@@ -267,9 +267,9 @@ function fechasADate<T extends { fechaNacimiento?: string; ultRecarga?: string; 
   };
 }
 
-/** Alta de un cliente nuevo: genera el ID CLxxxx automáticamente. Solo ADMIN. */
+/** Alta de un cliente nuevo: genera el ID CLxxxx automáticamente. ADMIN o GESTOR. */
 export async function crearCliente(actor: Actor, input: z.infer<typeof ClienteSchema>) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const data = ClienteSchema.parse(input);
   const id = await siguienteIdCliente();
   return prisma.cliente.create({ data: { id, ...fechasADate(data) } });
@@ -277,13 +277,13 @@ export async function crearCliente(actor: Actor, input: z.infer<typeof ClienteSc
 
 const ActualizarClienteSchema = ClienteSchema.partial();
 
-/** Editar un cliente existente. Solo ADMIN. */
+/** Editar un cliente existente. ADMIN o GESTOR. */
 export async function actualizarCliente(
   actor: Actor,
   id: string,
   input: z.infer<typeof ActualizarClienteSchema>,
 ) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const data = ActualizarClienteSchema.parse(input);
   return prisma.cliente.update({ where: { id }, data: fechasADate(data) });
 }

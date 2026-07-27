@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { type Actor, assertAdmin } from "@/lib/authz";
+import { type Actor, assertAdmin, assertGestion } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 
 export async function listUsuarios(actor: Actor) {
@@ -8,6 +8,16 @@ export async function listUsuarios(actor: Actor) {
   return prisma.usuario.findMany({
     orderBy: [{ rol: "asc" }, { letra: "asc" }, { nombre: "asc" }],
     select: { id: true, email: true, nombre: true, rol: true, letra: true, activo: true },
+  });
+}
+
+/** Lista de usuarios activos para asignar como responsable en Seguimiento/Aperturas. ADMIN o GESTOR. */
+export async function listUsuariosActivos(actor: Actor) {
+  assertGestion(actor);
+  return prisma.usuario.findMany({
+    where: { activo: true },
+    orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true },
   });
 }
 
@@ -25,11 +35,11 @@ const CrearUsuarioSchema = z
     email: z.string().email(),
     password: z.string().min(6),
     nombre: z.string().min(1),
-    rol: z.enum(["ADMIN", "OPERADOR"]),
+    rol: z.enum(["ADMIN", "OPERADOR", "GESTOR"]),
     letra: z.string().min(1).optional(),
     activo: z.boolean().default(true),
   })
-  .refine((data) => data.rol === "ADMIN" || !!data.letra, {
+  .refine((data) => data.rol !== "OPERADOR" || !!data.letra, {
     message: "La letra es obligatoria para operadores.",
     path: ["letra"],
   });
@@ -44,7 +54,7 @@ export async function crearUsuario(actor: Actor, input: z.infer<typeof CrearUsua
       password,
       nombre: data.nombre,
       rol: data.rol,
-      letra: data.rol === "ADMIN" ? null : data.letra!,
+      letra: data.rol === "OPERADOR" ? data.letra! : null,
       activo: data.activo,
     },
   });
@@ -55,7 +65,7 @@ const ActualizarUsuarioSchema = z
     email: z.string().email().optional(),
     password: z.string().min(6).optional(),
     nombre: z.string().min(1).optional(),
-    rol: z.enum(["ADMIN", "OPERADOR"]).optional(),
+    rol: z.enum(["ADMIN", "OPERADOR", "GESTOR"]).optional(),
     letra: z.string().min(1).optional(),
     activo: z.boolean().optional(),
   })
@@ -76,7 +86,7 @@ export async function actualizarUsuario(
     where: { id },
     data: {
       ...resto,
-      letra: resto.rol === "ADMIN" ? null : resto.letra,
+      letra: resto.rol === "OPERADOR" ? resto.letra : resto.rol ? null : resto.letra,
       ...(password ? { password: await bcrypt.hash(password, 10) } : {}),
     },
   });

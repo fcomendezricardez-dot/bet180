@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Actor, assertAdmin, assertLetraAccess } from "@/lib/authz";
+import { type Actor, assertGestion, assertLetraAccess } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -45,9 +45,9 @@ const CrearCuentaSchema = z.object({
   clienteActivo: z.boolean().optional(),
 });
 
-/** Alta de cuenta nueva (solo ADMIN, cualquier letra). */
+/** Alta de cuenta nueva (ADMIN o GESTOR, cualquier letra). */
 export async function crearCuenta(actor: Actor, input: z.infer<typeof CrearCuentaSchema>) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const data = CrearCuentaSchema.parse(input);
   return prisma.cuenta.create({ data: { ...data, status: "POR_VERIFICAR" } });
 }
@@ -58,13 +58,13 @@ const ActualizarCuentaSchema = CrearCuentaSchema.omit({ id: true })
     status: z.enum(["POR_VERIFICAR", "ACTIVA", "BLOQUEADA", "BAJA", "SIN_ACCESO"]).optional(),
   });
 
-/** Editar cuenta existente, incluyendo status/tipo (solo ADMIN, cualquier letra). */
+/** Editar cuenta existente, incluyendo status/tipo (ADMIN o GESTOR, cualquier letra). */
 export async function actualizarCuenta(
   actor: Actor,
   id: string,
   input: z.infer<typeof ActualizarCuentaSchema>,
 ) {
-  assertAdmin(actor);
+  assertGestion(actor);
   const data = ActualizarCuentaSchema.parse(input);
   return prisma.cuenta.update({ where: { id }, data });
 }

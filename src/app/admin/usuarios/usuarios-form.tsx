@@ -15,7 +15,7 @@ type Fila = {
   id: string;
   email: string;
   nombre: string;
-  rol: "ADMIN" | "OPERADOR";
+  rol: "ADMIN" | "OPERADOR" | "GESTOR";
   letra: string | null;
   activo: boolean;
 };
@@ -27,7 +27,7 @@ export function UsuariosForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
-  const [rol, setRol] = useState<"ADMIN" | "OPERADOR">("OPERADOR");
+  const [rol, setRol] = useState<"ADMIN" | "OPERADOR" | "GESTOR">("OPERADOR");
   const [letra, setLetra] = useState("");
   const [activo, setActivo] = useState(true);
   const [mensaje, setMensaje] = useState<string | null>(null);
@@ -93,7 +93,7 @@ export function UsuariosForm() {
   }
 
   const puedeGuardar =
-    !pending && !!email && !!nombre && (rol === "ADMIN" || !!letra) && (editando || password.length >= 6);
+    !pending && !!email && !!nombre && (rol !== "OPERADOR" || !!letra) && (editando || password.length >= 6);
 
   return (
     <div className="space-y-4">
@@ -111,7 +111,8 @@ export function UsuariosForm() {
                   {u.nombre} · {u.email}
                 </span>
                 <span className="block text-xs text-slate-400">
-                  {u.rol === "ADMIN" ? "Administrador" : `Operador · Letra ${u.letra}`} ·{" "}
+                  {u.rol === "ADMIN" ? "Administrador" : u.rol === "GESTOR" ? "Gestor" : `Operador · Letra ${u.letra}`}{" "}
+                  ·{" "}
                   {u.activo ? "Activo" : "Inactivo"}
                 </span>
               </button>
@@ -158,9 +159,10 @@ export function UsuariosForm() {
           <select
             className={inputClass}
             value={rol}
-            onChange={(e) => setRol(e.target.value as "ADMIN" | "OPERADOR")}
+            onChange={(e) => setRol(e.target.value as "ADMIN" | "OPERADOR" | "GESTOR")}
           >
             <option value="OPERADOR">Operador</option>
+            <option value="GESTOR">Gestor</option>
             <option value="ADMIN">Administrador</option>
           </select>
         </label>

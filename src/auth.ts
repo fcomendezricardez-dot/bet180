@@ -44,7 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub as string;
-        session.user.rol = token.rol as "ADMIN" | "OPERADOR";
+        session.user.rol = token.rol as "ADMIN" | "OPERADOR" | "GESTOR";
         session.user.letra = token.letra as string | null;
       }
       return session;
