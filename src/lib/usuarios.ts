@@ -1,0 +1,83 @@
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { type Actor, assertAdmin } from "@/lib/authz";
+import { prisma } from "@/lib/prisma";
+
+export async function listUsuarios(actor: Actor) {
+  assertAdmin(actor);
+  return prisma.usuario.findMany({
+    orderBy: [{ rol: "asc" }, { letra: "asc" }, { nombre: "asc" }],
+    select: { id: true, email: true, nombre: true, rol: true, letra: true, activo: true },
+  });
+}
+
+export async function getUsuario(actor: Actor, id: string) {
+  assertAdmin(actor);
+  const usuario = await prisma.usuario.findUniqueOrThrow({
+    where: { id },
+    select: { id: true, email: true, nombre: true, rol: true, letra: true, activo: true },
+  });
+  return usuario;
+}
+
+const CrearUsuarioSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(6),
+    nombre: z.string().min(1),
+    rol: z.enum(["ADMIN", "OPERADOR"]),
+    letra: z.string().min(1).optional(),
+    activo: z.boolean().default(true),
+  })
+  .refine((data) => data.rol === "ADMIN" || !!data.letra, {
+    message: "La letra es obligatoria para operadores.",
+    path: ["letra"],
+  });
+
+export async function crearUsuario(actor: Actor, input: z.infer<typeof CrearUsuarioSchema>) {
+  assertAdmin(actor);
+  const data = CrearUsuarioSchema.parse(input);
+  const password = await bcrypt.hash(data.password, 10);
+  return prisma.usuario.create({
+    data: {
+      email: data.email,
+      password,
+      nombre: data.nombre,
+      rol: data.rol,
+      letra: data.rol === "ADMIN" ? null : data.letra!,
+      activo: data.activo,
+    },
+  });
+}
+
+const ActualizarUsuarioSchema = z
+  .object({
+    email: z.string().email().optional(),
+    password: z.string().min(6).optional(),
+    nombre: z.string().min(1).optional(),
+    rol: z.enum(["ADMIN", "OPERADOR"]).optional(),
+    letra: z.string().min(1).optional(),
+    activo: z.boolean().optional(),
+  })
+  .refine((data) => data.rol !== "OPERADOR" || !!data.letra, {
+    message: "La letra es obligatoria para operadores.",
+    path: ["letra"],
+  });
+
+export async function actualizarUsuario(
+  actor: Actor,
+  id: string,
+  input: z.infer<typeof ActualizarUsuarioSchema>,
+) {
+  assertAdmin(actor);
+  const data = ActualizarUsuarioSchema.parse(input);
+  const { password, ...resto } = data;
+  return prisma.usuario.update({
+    where: { id },
+    data: {
+      ...resto,
+      letra: resto.rol === "ADMIN" ? null : resto.letra,
+      ...(password ? { password: await bcrypt.hash(password, 10) } : {}),
+    },
+  });
+}
