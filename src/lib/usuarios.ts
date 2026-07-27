@@ -21,6 +21,16 @@ export async function listUsuariosActivos(actor: Actor) {
   });
 }
 
+/** Lista de operadores activos, para el campo "Operador" (quien reporta) en Seguimiento. ADMIN o GESTOR. */
+export async function listOperadoresActivos(actor: Actor) {
+  assertGestion(actor);
+  return prisma.usuario.findMany({
+    where: { activo: true, rol: "OPERADOR" },
+    orderBy: [{ letra: "asc" }, { nombre: "asc" }],
+    select: { id: true, nombre: true, letra: true },
+  });
+}
+
 export async function getUsuario(actor: Actor, id: string) {
   assertAdmin(actor);
   const usuario = await prisma.usuario.findUniqueOrThrow({

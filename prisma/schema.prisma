@@ -33,8 +33,9 @@ model Usuario {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  seguimientosAsignados Seguimiento[]
-  aperturasAsignadas    Apertura[]
+  seguimientosReportados Seguimiento[] @relation("SeguimientoOperador")
+  seguimientosAsignados  Seguimiento[] @relation("SeguimientoResponsable")
+  aperturasAsignadas     Apertura[]
 
   @@map("usuarios")
 }
@@ -465,7 +466,7 @@ enum EstadoSeguimiento {
 model Seguimiento {
   id        Int                  @id @default(autoincrement())
   titulo    String
-  /// categoría libre (ej. "Falta de fotos", "Banco bloqueado", "Actualizar INE")
+  /// categoría libre de gestión (ej. "Actualización de datos", "Actualización de fotos", "Otros")
   tipo      String
   prioridad PrioridadSeguimiento @default(MEDIA)
   estado    EstadoSeguimiento    @default(PENDIENTE)
@@ -473,8 +474,13 @@ model Seguimiento {
   clienteId String?  @map("cliente_id")
   cliente   Cliente? @relation(fields: [clienteId], references: [id])
 
+  /// operador que reporta/envía la incidencia (no la asigna, solo la levanta)
+  operadorId String?  @map("operador_id")
+  operador   Usuario? @relation("SeguimientoOperador", fields: [operadorId], references: [id])
+
+  /// quien la resuelve, asignado por Gestión
   responsableId String?  @map("responsable_id")
-  responsable   Usuario? @relation(fields: [responsableId], references: [id])
+  responsable   Usuario? @relation("SeguimientoResponsable", fields: [responsableId], references: [id])
 
   fechaEntrega DateTime? @map("fecha_entrega")
 
@@ -489,14 +495,31 @@ model Seguimiento {
   notas     String?
   creadoPor String  @map("creado_por")
 
+  avances SeguimientoAvance[]
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([estado])
   @@index([clienteId])
+  @@index([operadorId])
   @@index([responsableId])
   @@index([fechaEntrega])
   @@map("seguimientos")
+}
+
+/// Historial de avance de un Seguimiento: notas con fecha para ver el progreso completo.
+model SeguimientoAvance {
+  id            Int         @id @default(autoincrement())
+  seguimientoId Int         @map("seguimiento_id")
+  seguimiento   Seguimiento @relation(fields: [seguimientoId], references: [id], onDelete: Cascade)
+
+  fecha         DateTime @default(now())
+  descripcion   String
+  registradoPor String   @map("registrado_por")
+
+  @@index([seguimientoId])
+  @@map("seguimiento_avances")
 }
 
 enum EstadoApertura {

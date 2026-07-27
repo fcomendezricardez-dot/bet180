@@ -3,14 +3,15 @@
 import { auth } from "@/auth";
 import { type Actor, ForbiddenError } from "@/lib/authz";
 import {
-  buscarCasinosSimple,
-  buscarCuentasSimple,
+  agregarAvance,
+  casinosYCuentasDeCliente,
   crearSeguimiento,
+  listAvances,
   listSeguimientos,
   actualizarSeguimiento,
 } from "@/lib/seguimiento";
 import { buscarClientes } from "@/lib/clientes";
-import { listUsuariosActivos } from "@/lib/usuarios";
+import { listOperadoresActivos, listUsuariosActivos } from "@/lib/usuarios";
 
 async function gestionOrThrow(): Promise<Actor> {
   const session = await auth();
@@ -27,6 +28,7 @@ export type SeguimientoInput = {
   tipo: string;
   prioridad: "BAJA" | "MEDIA" | "ALTA";
   clienteId?: string;
+  operadorId?: string;
   responsableId?: string;
   fechaEntrega?: string;
   casinoInvolucradoId?: string;
@@ -46,11 +48,13 @@ export async function accionListSeguimientos() {
     estado: f.estado,
     fechaEntrega: f.fechaEntrega?.toISOString() ?? null,
     cliente: f.cliente?.nombreCompleto ?? null,
+    operador: f.operador ? `${f.operador.nombre} (${f.operador.letra})` : null,
     responsable: f.responsable?.nombre ?? null,
     casino: f.casinoInvolucrado ? `${f.casinoInvolucrado.nombreCasino} (${f.casinoInvolucrado.perfil})` : null,
     banco: f.bancoInvolucrado ? `${f.bancoInvolucrado.banco} (${f.bancoInvolucrado.perfil})` : null,
     cantidadInvolucrada: f.cantidadInvolucrada ? f.cantidadInvolucrada.toNumber() : null,
     notas: f.notas,
+    numAvances: f._count.avances,
   }));
 }
 
@@ -82,17 +86,32 @@ export async function accionBuscarClientesSeguimiento(query: string) {
   return buscarClientes(actor, query);
 }
 
-export async function accionBuscarCasinosSeguimiento(query: string) {
+export async function accionCasinosYCuentasDeCliente(clienteId: string) {
   const actor = await gestionOrThrow();
-  return buscarCasinosSimple(actor, query);
-}
-
-export async function accionBuscarCuentasSeguimiento(query: string) {
-  const actor = await gestionOrThrow();
-  return buscarCuentasSimple(actor, query);
+  return casinosYCuentasDeCliente(actor, clienteId);
 }
 
 export async function accionListUsuariosActivos() {
   const actor = await gestionOrThrow();
   return listUsuariosActivos(actor);
+}
+
+export async function accionListOperadoresActivos() {
+  const actor = await gestionOrThrow();
+  return listOperadoresActivos(actor);
+}
+
+export async function accionListAvances(seguimientoId: number) {
+  const actor = await gestionOrThrow();
+  return listAvances(actor, seguimientoId);
+}
+
+export async function accionAgregarAvance(seguimientoId: number, descripcion: string): Promise<ActionResult> {
+  try {
+    const actor = await gestionOrThrow();
+    await agregarAvance(actor, seguimientoId, descripcion);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
 }

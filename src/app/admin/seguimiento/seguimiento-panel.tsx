@@ -1,27 +1,30 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { Fragment, useEffect, useState, useTransition } from "react";
 import {
   accionActualizarSeguimiento,
-  accionBuscarCasinosSeguimiento,
+  accionAgregarAvance,
   accionBuscarClientesSeguimiento,
-  accionBuscarCuentasSeguimiento,
+  accionCasinosYCuentasDeCliente,
   accionCrearSeguimiento,
+  accionListAvances,
+  accionListOperadoresActivos,
   accionListSeguimientos,
   accionListUsuariosActivos,
 } from "./actions";
 
 const inputClass = "mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm";
 const labelClass = "text-sm";
-const TIPOS_CONOCIDOS = ["Falta de fotos", "Banco bloqueado", "Actualizar INE"];
+const GESTION_CONOCIDA = ["Actualización de datos", "Actualización de fotos", "Otros"];
 
 type Fila = Awaited<ReturnType<typeof accionListSeguimientos>>[number];
 type ClienteOpcion = { id: string; nombreCompleto: string };
-type CasinoOpcion = { id: string; nombreCasino: string; letra: string; perfil: string };
-type CuentaOpcion = { id: string; banco: string; letra: string; perfil: string };
+type CuentasCasinosCliente = Awaited<ReturnType<typeof accionCasinosYCuentasDeCliente>>;
 
 const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
-const fecha = (iso: string) => new Intl.DateTimeFormat("es-MX").format(new Date(iso));
+const fecha = (iso: string | Date) => new Intl.DateTimeFormat("es-MX").format(new Date(iso));
+const fechaHora = (iso: string | Date) =>
+  new Intl.DateTimeFormat("es-MX", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
 
 function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
   const [titulo, setTitulo] = useState("");
@@ -36,24 +39,21 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
   const [clienteId, setClienteId] = useState("");
   const [clienteNombre, setClienteNombre] = useState("");
 
+  const [cuentasCasinos, setCuentasCasinos] = useState<CuentasCasinosCliente | null>(null);
+  const [casinoId, setCasinoId] = useState("");
+  const [cuentaId, setCuentaId] = useState("");
+
+  const [operadores, setOperadores] = useState<{ id: string; nombre: string; letra: string | null }[]>([]);
+  const [operadorId, setOperadorId] = useState("");
   const [responsables, setResponsables] = useState<{ id: string; nombre: string }[]>([]);
   const [responsableId, setResponsableId] = useState("");
-
-  const [casinoQuery, setCasinoQuery] = useState("");
-  const [casinoResultados, setCasinoResultados] = useState<CasinoOpcion[]>([]);
-  const [casinoId, setCasinoId] = useState("");
-  const [casinoNombre, setCasinoNombre] = useState("");
-
-  const [cuentaQuery, setCuentaQuery] = useState("");
-  const [cuentaResultados, setCuentaResultados] = useState<CuentaOpcion[]>([]);
-  const [cuentaId, setCuentaId] = useState("");
-  const [cuentaNombre, setCuentaNombre] = useState("");
 
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     accionListUsuariosActivos().then(setResponsables);
+    accionListOperadoresActivos().then(setOperadores);
   }, []);
 
   useEffect(() => {
@@ -64,21 +64,24 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
     return () => clearTimeout(handle);
   }, [clienteQuery]);
 
-  useEffect(() => {
-    if (!casinoQuery.trim()) return;
-    const handle = setTimeout(() => {
-      startTransition(async () => setCasinoResultados(await accionBuscarCasinosSeguimiento(casinoQuery)));
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [casinoQuery]);
+  function elegirCliente(c: ClienteOpcion) {
+    setClienteId(c.id);
+    setClienteNombre(c.nombreCompleto);
+    setClienteQuery("");
+    setClienteResultados([]);
+    setCasinoId("");
+    setCuentaId("");
+    setCuentasCasinos(null);
+    startTransition(async () => setCuentasCasinos(await accionCasinosYCuentasDeCliente(c.id)));
+  }
 
-  useEffect(() => {
-    if (!cuentaQuery.trim()) return;
-    const handle = setTimeout(() => {
-      startTransition(async () => setCuentaResultados(await accionBuscarCuentasSeguimiento(cuentaQuery)));
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [cuentaQuery]);
+  function quitarCliente() {
+    setClienteId("");
+    setClienteNombre("");
+    setCasinoId("");
+    setCuentaId("");
+    setCuentasCasinos(null);
+  }
 
   function limpiar() {
     setTitulo("");
@@ -88,15 +91,9 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
     setCantidadInvolucrada("");
     setNotas("");
     setClienteQuery("");
-    setClienteId("");
-    setClienteNombre("");
+    quitarCliente();
+    setOperadorId("");
     setResponsableId("");
-    setCasinoQuery("");
-    setCasinoId("");
-    setCasinoNombre("");
-    setCuentaQuery("");
-    setCuentaId("");
-    setCuentaNombre("");
   }
 
   function crear() {
@@ -107,6 +104,7 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
         tipo,
         prioridad,
         clienteId: clienteId || undefined,
+        operadorId: operadorId || undefined,
         responsableId: responsableId || undefined,
         fechaEntrega: fechaEntrega || undefined,
         casinoInvolucradoId: casinoId || undefined,
@@ -133,15 +131,15 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
           <input className={inputClass} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
         </label>
         <label className={labelClass}>
-          Tipo
+          Gestión
           <input
             className={inputClass}
-            list="tipos-seguimiento"
+            list="gestion-seguimiento"
             value={tipo}
             onChange={(e) => setTipo(e.target.value)}
           />
-          <datalist id="tipos-seguimiento">
-            {TIPOS_CONOCIDOS.map((t) => (
+          <datalist id="gestion-seguimiento">
+            {GESTION_CONOCIDA.map((t) => (
               <option key={t} value={t} />
             ))}
           </datalist>
@@ -159,7 +157,18 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
           <input type="date" className={inputClass} value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} />
         </label>
         <label className={labelClass}>
-          Responsable
+          Operador (quien reporta)
+          <select className={inputClass} value={operadorId} onChange={(e) => setOperadorId(e.target.value)}>
+            <option value="">— sin asignar —</option>
+            {operadores.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.nombre} ({o.letra})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={labelClass}>
+          Responsable (quien lo resuelve)
           <select className={inputClass} value={responsableId} onChange={(e) => setResponsableId(e.target.value)}>
             <option value="">— sin asignar —</option>
             {responsables.map((r) => (
@@ -186,7 +195,7 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
         {clienteId ? (
           <div className="mt-1 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
             <span>{clienteNombre}</span>
-            <button type="button" onClick={() => { setClienteId(""); setClienteNombre(""); }} className="text-xs text-slate-500 underline">
+            <button type="button" onClick={quitarCliente} className="text-xs text-slate-500 underline">
               Quitar
             </button>
           </div>
@@ -205,7 +214,7 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
               <li key={c.id}>
                 <button
                   type="button"
-                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombreCompleto); setClienteQuery(""); }}
+                  onClick={() => elegirCliente(c)}
                   className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
                 >
                   {c.nombreCompleto} <span className="text-xs text-slate-400">({c.id})</span>
@@ -217,75 +226,44 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <p className={labelClass}>Casino involucrado (opcional)</p>
-          {casinoId ? (
-            <div className="mt-1 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-              <span>{casinoNombre}</span>
-              <button type="button" onClick={() => { setCasinoId(""); setCasinoNombre(""); }} className="text-xs text-slate-500 underline">
-                Quitar
-              </button>
-            </div>
-          ) : (
-            <input
-              type="text"
-              placeholder="Buscar casino…"
-              className={inputClass}
-              value={casinoQuery}
-              onChange={(e) => setCasinoQuery(e.target.value)}
-            />
+        <label className={labelClass}>
+          Casino involucrado (opcional)
+          <select
+            className={inputClass}
+            value={casinoId}
+            disabled={!clienteId}
+            onChange={(e) => setCasinoId(e.target.value)}
+          >
+            <option value="">{clienteId ? "— sin casino —" : "selecciona un cliente primero"}</option>
+            {cuentasCasinos?.casinos.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombreCasino} ({c.perfil})
+              </option>
+            ))}
+          </select>
+          {clienteId && cuentasCasinos && cuentasCasinos.casinos.length === 0 && (
+            <p className="mt-0.5 text-xs text-slate-400">Este cliente no tiene casinos registrados.</p>
           )}
-          {!casinoId && casinoQuery.trim() && casinoResultados.length > 0 && (
-            <ul className="mt-1 divide-y divide-slate-100 rounded border border-slate-200 bg-white">
-              {casinoResultados.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => { setCasinoId(c.id); setCasinoNombre(`${c.nombreCasino} (${c.perfil})`); setCasinoQuery(""); }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-                  >
-                    {c.nombreCasino} <span className="text-xs text-slate-400">({c.letra}.{c.perfil})</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+        </label>
+        <label className={labelClass}>
+          Banco involucrado (opcional)
+          <select
+            className={inputClass}
+            value={cuentaId}
+            disabled={!clienteId}
+            onChange={(e) => setCuentaId(e.target.value)}
+          >
+            <option value="">{clienteId ? "— sin banco —" : "selecciona un cliente primero"}</option>
+            {cuentasCasinos?.cuentas.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.banco} ({c.perfil})
+              </option>
+            ))}
+          </select>
+          {clienteId && cuentasCasinos && cuentasCasinos.cuentas.length === 0 && (
+            <p className="mt-0.5 text-xs text-slate-400">Este cliente no tiene bancos registrados.</p>
           )}
-        </div>
-
-        <div>
-          <p className={labelClass}>Banco involucrado (opcional)</p>
-          {cuentaId ? (
-            <div className="mt-1 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-              <span>{cuentaNombre}</span>
-              <button type="button" onClick={() => { setCuentaId(""); setCuentaNombre(""); }} className="text-xs text-slate-500 underline">
-                Quitar
-              </button>
-            </div>
-          ) : (
-            <input
-              type="text"
-              placeholder="Buscar banco…"
-              className={inputClass}
-              value={cuentaQuery}
-              onChange={(e) => setCuentaQuery(e.target.value)}
-            />
-          )}
-          {!cuentaId && cuentaQuery.trim() && cuentaResultados.length > 0 && (
-            <ul className="mt-1 divide-y divide-slate-100 rounded border border-slate-200 bg-white">
-              {cuentaResultados.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => { setCuentaId(c.id); setCuentaNombre(`${c.banco} (${c.perfil})`); setCuentaQuery(""); }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-                  >
-                    {c.banco} <span className="text-xs text-slate-400">({c.letra}.{c.perfil})</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        </label>
       </div>
 
       <label className={labelClass}>
@@ -306,6 +284,79 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
   );
 }
 
+function HistorialAvance({ seguimientoId, onCambio }: { seguimientoId: number; onCambio: () => void }) {
+  const [avances, setAvances] = useState<{ id: number; fecha: Date | string; descripcion: string; registradoPor: string }[]>([]);
+  const [cargado, setCargado] = useState(false);
+  const [nuevo, setNuevo] = useState("");
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function recargar() {
+    accionListAvances(seguimientoId).then((data) => {
+      setAvances(data);
+      setCargado(true);
+    });
+  }
+
+  useEffect(() => {
+    recargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seguimientoId]);
+
+  function agregar() {
+    setMensaje(null);
+    startTransition(async () => {
+      const result = await accionAgregarAvance(seguimientoId, nuevo);
+      if (result.ok) {
+        setNuevo("");
+        recargar();
+        onCambio();
+      } else {
+        setMensaje(`Error: ${result.error}`);
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-2 bg-slate-50 p-3">
+      <p className="text-xs font-semibold text-slate-600">Historial de avance</p>
+      {!cargado ? (
+        <p className="text-xs text-slate-400">Cargando…</p>
+      ) : avances.length === 0 ? (
+        <p className="text-xs text-slate-400">Sin avances registrados todavía.</p>
+      ) : (
+        <ul className="space-y-1">
+          {avances.map((a) => (
+            <li key={a.id} className="rounded border border-slate-200 bg-white px-2 py-1 text-xs">
+              <span className="font-medium text-slate-700">{fechaHora(a.fecha)}</span>
+              <span className="ml-2 text-slate-500">({a.registradoPor})</span>
+              <p className="mt-0.5 text-slate-700">{a.descripcion}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="Agregar avance (ej. cliente envió fotos, falta una)…"
+          value={nuevo}
+          onChange={(e) => setNuevo(e.target.value)}
+          className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs"
+        />
+        <button
+          type="button"
+          disabled={pending || !nuevo.trim()}
+          onClick={agregar}
+          className="rounded bg-slate-900 px-2 py-1 text-xs text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          Agregar
+        </button>
+      </div>
+      {mensaje && <p className="text-xs text-red-600">{mensaje}</p>}
+    </div>
+  );
+}
+
 const badgePrioridad: Record<Fila["prioridad"], string> = {
   BAJA: "bg-slate-100 text-slate-600",
   MEDIA: "bg-amber-100 text-amber-700",
@@ -316,6 +367,7 @@ export function SeguimientoPanel() {
   const [filas, setFilas] = useState<Fila[]>([]);
   const [cargado, setCargado] = useState(false);
   const [filtro, setFiltro] = useState<"PENDIENTE" | "COMPLETADO" | "TODOS">("PENDIENTE");
+  const [expandido, setExpandido] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
   function recargar() {
@@ -366,9 +418,10 @@ export function SeguimientoPanel() {
               <thead className="bg-slate-50 text-left text-slate-500">
                 <tr>
                   <th className="px-3 py-2">Título</th>
-                  <th className="px-3 py-2">Tipo</th>
+                  <th className="px-3 py-2">Gestión</th>
                   <th className="px-3 py-2">Cliente</th>
                   <th className="px-3 py-2">Prioridad</th>
+                  <th className="px-3 py-2">Operador</th>
                   <th className="px-3 py-2">Responsable</th>
                   <th className="px-3 py-2">Fecha entrega</th>
                   <th className="px-3 py-2">Casino/Banco</th>
@@ -378,38 +431,55 @@ export function SeguimientoPanel() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {visibles.map((f) => (
-                  <tr key={f.id}>
-                    <td className="px-3 py-2">{f.titulo}</td>
-                    <td className="px-3 py-2">{f.tipo}</td>
-                    <td className="px-3 py-2">{f.cliente ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgePrioridad[f.prioridad]}`}>
-                        {f.prioridad}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">{f.responsable ?? "—"}</td>
-                    <td className="px-3 py-2">{f.fechaEntrega ? fecha(f.fechaEntrega) : "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">{f.casino ?? f.banco ?? "—"}</td>
-                    <td className="px-3 py-2">{f.cantidadInvolucrada !== null ? money(f.cantidadInvolucrada) : "—"}</td>
-                    <td className="px-3 py-2">
-                      {f.estado === "PENDIENTE" ? (
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => completar(f.id)}
-                          className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
-                        >
-                          Completar
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate-400">Completado</span>
-                      )}
-                    </td>
-                  </tr>
+                  <Fragment key={f.id}>
+                    <tr>
+                      <td className="px-3 py-2">{f.titulo}</td>
+                      <td className="px-3 py-2">{f.tipo}</td>
+                      <td className="px-3 py-2">{f.cliente ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgePrioridad[f.prioridad]}`}>
+                          {f.prioridad}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">{f.operador ?? "—"}</td>
+                      <td className="px-3 py-2">{f.responsable ?? "—"}</td>
+                      <td className="px-3 py-2">{f.fechaEntrega ? fecha(f.fechaEntrega) : "—"}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{f.casino ?? f.banco ?? "—"}</td>
+                      <td className="px-3 py-2">{f.cantidadInvolucrada !== null ? money(f.cantidadInvolucrada) : "—"}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setExpandido(expandido === f.id ? null : f.id)}
+                            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                          >
+                            {expandido === f.id ? "Ocultar" : `Historial${f.numAvances > 0 ? ` (${f.numAvances})` : ""}`}
+                          </button>
+                          {f.estado === "PENDIENTE" && (
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => completar(f.id)}
+                              className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              Completar
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {expandido === f.id && (
+                      <tr>
+                        <td colSpan={10} className="p-0">
+                          <HistorialAvance seguimientoId={f.id} onCambio={recargar} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
                 {visibles.length === 0 && (
                   <tr>
-                    <td className="px-3 py-3 text-slate-400" colSpan={9}>
+                    <td className="px-3 py-3 text-slate-400" colSpan={10}>
                       Sin seguimientos con este filtro.
                     </td>
                   </tr>
