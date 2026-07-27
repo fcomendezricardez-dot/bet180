@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { etiquetaCorta } from "@/lib/format";
 import {
   accionActualizarCasino,
   accionBuscarCasinos,
@@ -48,7 +49,7 @@ export function CasinoForm() {
 
   const [buscarQuery, setBuscarQuery] = useState("");
   const [buscarResultados, setBuscarResultados] = useState<
-    { id: string; nombreCasino: string; letra: string; perfil: string; statusCasino: string }[]
+    { id: string; nombreCasino: string; letra: string; perfil: string; statusCasino: string; nombreCliente: string | null }[]
   >([]);
 
   useEffect(() => {
@@ -162,9 +163,11 @@ export function CasinoForm() {
                   onClick={() => cargar(r.id)}
                   className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
                 >
-                  <span className="block font-medium text-slate-900">{r.nombreCasino}</span>
+                  <span className="block font-medium text-slate-900">
+                    {etiquetaCorta(r.nombreCasino, r.perfil)} · {r.nombreCliente ?? "sin cliente asignado"}
+                  </span>
                   <span className="block text-xs text-slate-400">
-                    {r.letra}.{r.perfil} · {r.id} · {r.statusCasino}
+                    {r.nombreCasino} · {r.id} · {r.statusCasino}
                   </span>
                 </button>
               </li>

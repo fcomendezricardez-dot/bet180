@@ -10,7 +10,13 @@ import {
 } from "@/lib/bonos";
 import { crearCasino, actualizarCasino, getCasino } from "@/lib/casinos";
 import { crearCuenta, actualizarCuenta, getCuenta } from "@/lib/cuentas";
-import { buscarClientes, crearCliente, actualizarCliente, getClienteParaEditar } from "@/lib/clientes";
+import {
+  buscarClientes,
+  clientesPorLetraPerfil,
+  crearCliente,
+  actualizarCliente,
+  getClienteParaEditar,
+} from "@/lib/clientes";
 import { prisma } from "@/lib/prisma";
 
 async function adminOrThrow(): Promise<Actor> {
@@ -83,7 +89,7 @@ export async function accionBuscarCuentas(query: string) {
         { banco: { contains: query.trim(), mode: "insensitive" } },
       ],
     },
-    select: { id: true, banco: true, letra: true, perfil: true, status: true },
+    select: { id: true, banco: true, letra: true, perfil: true, status: true, nombreCliente: true },
     orderBy: [{ letra: "asc" }, { perfil: "asc" }],
     take: 20,
   });
@@ -137,7 +143,7 @@ export async function accionActualizarCasino(
 export async function accionBuscarCasinos(query: string) {
   await adminOrThrow();
   if (!query.trim()) return [];
-  return prisma.casino.findMany({
+  const casinos = await prisma.casino.findMany({
     where: {
       OR: [
         { id: { contains: query.trim(), mode: "insensitive" } },
@@ -148,6 +154,8 @@ export async function accionBuscarCasinos(query: string) {
     orderBy: [{ letra: "asc" }, { perfil: "asc" }],
     take: 20,
   });
+  const clientes = await clientesPorLetraPerfil(casinos.map((c) => ({ letra: c.letra, perfil: c.perfil })));
+  return casinos.map((c) => ({ ...c, nombreCliente: clientes.get(`${c.letra}.${c.perfil}`)?.nombreCompleto ?? null }));
 }
 
 export async function accionObtenerCasino(id: string) {

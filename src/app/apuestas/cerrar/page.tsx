@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { listApuestas } from "@/lib/apuestas";
+import { clientesPorLetraPerfil } from "@/lib/clientes";
 import { CerrarApuestaTable } from "./cerrar-apuesta-table";
 
 export default async function CerrarApuestaPage() {
@@ -8,6 +9,7 @@ export default async function CerrarApuestaPage() {
   const actor = { rol: session.user.rol, letra: session.user.letra };
 
   const apuestas = await listApuestas(actor, { statusApuesta: "EN_JUEGO" });
+  const clientes = await clientesPorLetraPerfil(apuestas.map((a) => ({ letra: a.letra, perfil: a.perfil })));
 
   const filas = apuestas.map((a) => ({
     id: a.id,
@@ -15,6 +17,7 @@ export default async function CerrarApuestaPage() {
     letra: a.letra,
     perfil: a.perfil,
     casino: a.casino.nombreCasino,
+    cliente: clientes.get(`${a.letra}.${a.perfil}`)?.nombreCompleto ?? null,
     noApuesta: a.noApuesta,
     evento: a.evento,
     descripcion: a.descripcion,

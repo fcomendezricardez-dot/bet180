@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { etiquetaCorta } from "@/lib/format";
 import { accionCerrarGanada, accionCerrarPerdida } from "./actions";
 
 type Fila = {
@@ -9,6 +10,7 @@ type Fila = {
   letra: string;
   perfil: string;
   casino: string;
+  cliente: string | null;
   noApuesta: string | null;
   evento: string;
   descripcion: string | null;
@@ -74,8 +76,8 @@ export function CerrarApuestaTable({ apuestas }: { apuestas: Fila[] }) {
           <thead className="bg-slate-50 text-left text-slate-500">
             <tr>
               <th className="px-3 py-2">Fecha</th>
-              <th className="px-3 py-2">Perfil</th>
-              <th className="px-3 py-2">Casino</th>
+              <th className="px-3 py-2">Cuenta</th>
+              <th className="px-3 py-2">Cliente</th>
               <th className="px-3 py-2">No. apuesta</th>
               <th className="px-3 py-2">Evento</th>
               <th className="px-3 py-2">Descripción</th>
@@ -91,10 +93,8 @@ export function CerrarApuestaTable({ apuestas }: { apuestas: Fila[] }) {
             {filas.map((f) => (
               <tr key={f.id}>
                 <td className="px-3 py-2 whitespace-nowrap text-xs text-slate-500">{fechaHora(f.fecha)}</td>
-                <td className="px-3 py-2">
-                  {f.letra}.{f.perfil}
-                </td>
-                <td className="px-3 py-2">{f.casino}</td>
+                <td className="px-3 py-2">{etiquetaCorta(f.casino, f.perfil)}</td>
+                <td className="px-3 py-2">{f.cliente ?? "sin cliente asignado"}</td>
                 <td className="px-3 py-2">{f.noApuesta ?? "—"}</td>
                 <td className="px-3 py-2">{f.evento}</td>
                 <td className="px-3 py-2">{f.descripcion ?? "—"}</td>

@@ -135,6 +135,39 @@ export async function clientePorLetraPerfil(letra: string, perfil: string) {
 }
 
 /**
+ * Igual que clientePorLetraPerfil pero resuelve varios pares letra.perfil de
+ * una sola vez (para listas), devolviendo un mapa `letra.perfil -> cliente`.
+ */
+export async function clientesPorLetraPerfil(pares: { letra: string; perfil: string }[]) {
+  const unicos = [...new Map(pares.map((p) => [`${p.letra}.${p.perfil}`, p])).values()];
+  const resultado = new Map<string, { id: string; nombreCompleto: string } | null>();
+
+  const [clientesPorEquipo, clientesPorCuenta] = await Promise.all([
+    prisma.cliente.findMany({
+      where: { equipo: { in: unicos.map((p) => `${p.letra.toLowerCase()}-${p.perfil}`) } },
+      select: { id: true, nombreCompleto: true, equipo: true },
+    }),
+    prisma.cliente.findMany({
+      where: { cuentas: { some: { OR: unicos.map((p) => ({ letra: p.letra, perfil: p.perfil })) } } },
+      select: { id: true, nombreCompleto: true, cuentas: { select: { letra: true, perfil: true }, take: 1 } },
+    }),
+  ]);
+
+  for (const p of unicos) {
+    const key = `${p.letra}.${p.perfil}`;
+    const porEquipo = clientesPorEquipo.find((c) => parsearEquipo(c.equipo ?? null)?.letra === p.letra && parsearEquipo(c.equipo ?? null)?.perfil === p.perfil);
+    if (porEquipo) {
+      resultado.set(key, { id: porEquipo.id, nombreCompleto: porEquipo.nombreCompleto });
+      continue;
+    }
+    const porCuenta = clientesPorCuenta.find((c) => c.cuentas.some((cc) => cc.letra === p.letra && cc.perfil === p.perfil));
+    resultado.set(key, porCuenta ? { id: porCuenta.id, nombreCompleto: porCuenta.nombreCompleto } : null);
+  }
+
+  return resultado;
+}
+
+/**
  * Busca clientes por nombre o ID y resuelve en qué letra.perfil está jugando
  * cada uno ahora mismo (vía `equipo`, o si no está definido, vía su cuenta
  * vinculada). Disponible para ADMIN y OPERADOR (el operador solo ve los de su

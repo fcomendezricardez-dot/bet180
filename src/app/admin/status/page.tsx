@@ -4,7 +4,7 @@ import { StatusTable } from "./status-table";
 export default async function EditarStatusPage() {
   const cuentas = await prisma.cuenta.findMany({
     orderBy: [{ letra: "asc" }, { perfil: "asc" }],
-    select: { id: true, letra: true, perfil: true, banco: true, status: true, tipoCuenta: true },
+    select: { id: true, letra: true, perfil: true, banco: true, status: true, tipoCuenta: true, nombreCliente: true },
   });
 
   return (

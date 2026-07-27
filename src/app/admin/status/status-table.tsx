@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { etiquetaCorta } from "@/lib/format";
 import { accionActualizarStatus } from "./actions";
 
 type Fila = {
@@ -8,6 +9,7 @@ type Fila = {
   letra: string;
   perfil: string;
   banco: string;
+  nombreCliente: string | null;
   status: "POR_VERIFICAR" | "ACTIVA" | "BLOQUEADA" | "BAJA" | "SIN_ACCESO";
   tipoCuenta: "BASICA" | "SIN_LIMITE" | "MEJORADA" | null;
 };
@@ -32,10 +34,8 @@ function FilaEditable({ fila }: { fila: Fila }) {
 
   return (
     <tr>
-      <td className="px-3 py-2">
-        {fila.letra}.{fila.perfil}
-      </td>
-      <td className="px-3 py-2">{fila.banco}</td>
+      <td className="px-3 py-2">{etiquetaCorta(fila.banco, fila.perfil)}</td>
+      <td className="px-3 py-2">{fila.nombreCliente ?? "sin cliente asignado"}</td>
       <td className="px-3 py-2">
         <select
           className="rounded border border-slate-300 px-2 py-1 text-sm"
@@ -82,8 +82,8 @@ export function StatusTable({ cuentas }: { cuentas: Fila[] }) {
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         <thead className="bg-slate-50 text-left text-slate-500">
           <tr>
-            <th className="px-3 py-2">Perfil</th>
-            <th className="px-3 py-2">Banco</th>
+            <th className="px-3 py-2">Cuenta</th>
+            <th className="px-3 py-2">Cliente</th>
             <th className="px-3 py-2">Status</th>
             <th className="px-3 py-2">Tipo</th>
             <th className="px-3 py-2" />

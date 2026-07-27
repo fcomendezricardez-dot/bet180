@@ -1,8 +1,10 @@
-import { formatMoney } from "@/lib/format";
+import { clientesPorLetraPerfil } from "@/lib/clientes";
+import { etiquetaCorta, formatMoney } from "@/lib/format";
 import { flujoDeMovimientos, gananciaPorCasino } from "@/lib/reportes";
 
 export default async function ReportesPage() {
   const [flujo, ganancia] = await Promise.all([flujoDeMovimientos(), gananciaPorCasino()]);
+  const clientes = await clientesPorLetraPerfil(ganancia.filas.map((f) => ({ letra: f.letra, perfil: f.perfil })));
 
   return (
     <div className="space-y-10">
@@ -37,8 +39,8 @@ export default async function ReportesPage() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
-                <th className="px-3 py-2">Perfil</th>
-                <th className="px-3 py-2">Casino</th>
+                <th className="px-3 py-2">Cuenta</th>
+                <th className="px-3 py-2">Cliente</th>
                 <th className="px-3 py-2">Depósitos totales</th>
                 <th className="px-3 py-2">Apuestas totales</th>
                 <th className="px-3 py-2">Cobros totales</th>
@@ -48,10 +50,8 @@ export default async function ReportesPage() {
             <tbody className="divide-y divide-slate-100">
               {ganancia.filas.map((f) => (
                 <tr key={f.casinoId}>
-                  <td className="px-3 py-2">
-                    {f.letra}.{f.perfil}
-                  </td>
-                  <td className="px-3 py-2">{f.nombreCasino}</td>
+                  <td className="px-3 py-2">{etiquetaCorta(f.nombreCasino, f.perfil)}</td>
+                  <td className="px-3 py-2">{clientes.get(`${f.letra}.${f.perfil}`)?.nombreCompleto ?? "sin cliente asignado"}</td>
                   <td className="px-3 py-2">{formatMoney(f.depositos)}</td>
                   <td className="px-3 py-2">{formatMoney(f.apuestas)}</td>
                   <td className="px-3 py-2">{formatMoney(f.cobros)}</td>

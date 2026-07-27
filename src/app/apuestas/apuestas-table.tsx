@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { etiquetaCorta } from "@/lib/format";
 
 type StatusApuesta = "EN_JUEGO" | "GANADA" | "PERDIDA";
 
@@ -10,6 +11,7 @@ type Fila = {
   letra: string;
   perfil: string;
   casino: string;
+  cliente: string | null;
   noApuesta: string | null;
   evento: string;
   descripcion: string | null;
@@ -125,8 +127,8 @@ export function ApuestasTable({ apuestas }: { apuestas: Fila[] }) {
           <thead className="bg-slate-50 text-left text-slate-500">
             <tr>
               <th className="px-3 py-2">Fecha</th>
-              <th className="px-3 py-2">Perfil</th>
-              <th className="px-3 py-2">Casino</th>
+              <th className="px-3 py-2">Cuenta</th>
+              <th className="px-3 py-2">Cliente</th>
               <th className="px-3 py-2">No. apuesta</th>
               <th className="px-3 py-2">Evento</th>
               <th className="px-3 py-2">Descripción</th>
@@ -143,10 +145,8 @@ export function ApuestasTable({ apuestas }: { apuestas: Fila[] }) {
             {visibles.map((a) => (
               <tr key={a.id}>
                 <td className="px-3 py-2 whitespace-nowrap text-xs text-slate-500">{fechaHora(a.fecha)}</td>
-                <td className="px-3 py-2">
-                  {a.letra}.{a.perfil}
-                </td>
-                <td className="px-3 py-2">{a.casino}</td>
+                <td className="px-3 py-2">{etiquetaCorta(a.casino, a.perfil)}</td>
+                <td className="px-3 py-2">{a.cliente ?? "sin cliente asignado"}</td>
                 <td className="px-3 py-2">{a.noApuesta ?? "—"}</td>
                 <td className="px-3 py-2">{a.evento}</td>
                 <td className="px-3 py-2">{a.descripcion ?? "—"}</td>

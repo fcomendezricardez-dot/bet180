@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/auth";
-import { formatMoney } from "@/lib/format";
+import { etiquetaCorta, formatMoney } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { calcularSaldosCasinos, calcularSaldosCuentas } from "@/lib/saldos";
@@ -29,7 +29,7 @@ export default async function DashboardPage() {
     calcularSaldosCasinos(casinoWhere),
     prisma.movimiento.findMany({
       where: { estado: "PENDIENTE", cuenta: esAdmin ? undefined : { letra: actor.letra! } },
-      include: { cuenta: { select: { letra: true, perfil: true, banco: true } } },
+      include: { cuenta: { select: { letra: true, perfil: true, banco: true, nombreCliente: true } } },
       orderBy: { fecha: "desc" },
     }),
   ]);
@@ -83,7 +83,8 @@ export default async function DashboardPage() {
           <ul className="space-y-1 text-sm text-amber-900">
             {pendientes.map((m) => (
               <li key={m.id}>
-                {m.cuenta.banco} · {m.cuenta.letra}.{m.cuenta.perfil} — {formatMoney(m.monto)} ({m.tipoMovimiento})
+                {etiquetaCorta(m.cuenta.banco, m.cuenta.perfil)} · {m.cuenta.nombreCliente ?? "sin cliente asignado"} —{" "}
+                {formatMoney(m.monto)} ({m.tipoMovimiento})
               </li>
             ))}
           </ul>
