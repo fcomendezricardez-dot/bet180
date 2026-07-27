@@ -5,6 +5,7 @@ import { accionActualizarCliente, accionBuscarClientes, accionCrearCliente, acci
 
 const inputClass = "mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm";
 const labelClass = "text-sm";
+const STATUS_CONOCIDOS = ["Activo", "En proceso", "Eventual", "Baja"];
 
 function aFechaInput(d: Date | string | null | undefined) {
   if (!d) return "";
@@ -230,7 +231,14 @@ export function ClienteForm() {
           </label>
           <label className={labelClass}>
             Status
-            <input className={inputClass} value={status} onChange={(e) => setStatus(e.target.value)} />
+            <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="">— sin status —</option>
+              <option value="Activo">Activo</option>
+              <option value="En proceso">En proceso</option>
+              <option value="Eventual">Eventual</option>
+              <option value="Baja">Baja</option>
+              {status && !STATUS_CONOCIDOS.includes(status) && <option value={status}>{status}</option>}
+            </select>
           </label>
           <label className={labelClass}>
             Equipo (letra-perfil, ej. a-101)
