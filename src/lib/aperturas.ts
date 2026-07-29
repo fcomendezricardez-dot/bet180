@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 const AperturaSchema = z.object({
   nombreCliente: z.string().min(1),
   telefono: z.string().optional(),
-  letra: z.string().optional(),
+  equipo: z.string().optional(),
+  referidoPor: z.string().optional(),
   clienteId: z.string().optional(),
   bancoOCasino: z.string().min(1),
   fechaCita: z.string().min(1),

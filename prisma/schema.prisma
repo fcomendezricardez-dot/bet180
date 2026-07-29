@@ -532,7 +532,12 @@ model Apertura {
   id            Int    @id @default(autoincrement())
   nombreCliente String @map("nombre_cliente")
   telefono      String?
-  letra         String?
+
+  /// letra-perfil, ej "a-101": null = aún no se ha asignado equipo
+  equipo String?
+
+  /// quién refiere al prospecto
+  referidoPor String? @map("referido_por")
 
   clienteId String?  @map("cliente_id")
   cliente   Cliente? @relation(fields: [clienteId], references: [id])

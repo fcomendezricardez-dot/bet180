@@ -7,6 +7,7 @@ import {
   accionCrearApertura,
   accionListAperturas,
   accionListUsuariosActivosApertura,
+  accionPrevisualizarSiguienteIdCliente,
 } from "./actions";
 
 const inputClass = "mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm";
@@ -21,7 +22,8 @@ const fechaHora = (iso: string) =>
 function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
   const [nombreCliente, setNombreCliente] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [letra, setLetra] = useState("");
+  const [equipo, setEquipo] = useState("");
+  const [referidoPor, setReferidoPor] = useState("");
   const [bancoOCasino, setBancoOCasino] = useState("");
   const [fechaCita, setFechaCita] = useState("");
   const [notas, setNotas] = useState("");
@@ -33,11 +35,14 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
   const [responsables, setResponsables] = useState<{ id: string; nombre: string }[]>([]);
   const [responsableId, setResponsableId] = useState("");
 
+  const [proximoId, setProximoId] = useState<string | null>(null);
+
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     accionListUsuariosActivosApertura().then(setResponsables);
+    accionPrevisualizarSiguienteIdCliente().then(setProximoId);
   }, []);
 
   useEffect(() => {
@@ -58,7 +63,8 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
   function limpiar() {
     setNombreCliente("");
     setTelefono("");
-    setLetra("");
+    setEquipo("");
+    setReferidoPor("");
     setBancoOCasino("");
     setFechaCita("");
     setNotas("");
@@ -73,7 +79,8 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
       const result = await accionCrearApertura({
         nombreCliente,
         telefono: telefono || undefined,
-        letra: letra || undefined,
+        equipo: equipo || undefined,
+        referidoPor: referidoPor || undefined,
         clienteId: clienteId || undefined,
         bancoOCasino,
         fechaCita,
@@ -92,7 +99,14 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
 
   return (
     <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-      <h3 className="text-sm font-semibold text-slate-700">Agendar próxima apertura</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-700">Agendar próxima apertura</h3>
+        {proximoId && (
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+            Próximo ID de cliente: <strong>{proximoId}</strong>
+          </span>
+        )}
+      </div>
 
       <div>
         <p className={labelClass}>Cliente ya existente (opcional — si no, escribe el nombre abajo)</p>
@@ -130,7 +144,7 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className={labelClass}>
-          Nombre
+          Nombre de prospecto
           <input className={inputClass} value={nombreCliente} onChange={(e) => setNombreCliente(e.target.value)} />
         </label>
         <label className={labelClass}>
@@ -138,8 +152,13 @@ function FormularioNuevo({ onCreado }: { onCreado: () => void }) {
           <input className={inputClass} value={telefono} onChange={(e) => setTelefono(e.target.value)} />
         </label>
         <label className={labelClass}>
-          Letra
-          <input className={inputClass} value={letra} onChange={(e) => setLetra(e.target.value.toUpperCase())} maxLength={1} />
+          Quién lo refiere
+          <input className={inputClass} value={referidoPor} onChange={(e) => setReferidoPor(e.target.value)} />
+        </label>
+        <label className={labelClass}>
+          Equipo (letra-perfil, ej. a-101)
+          <p className="mt-0.5 text-xs font-normal text-slate-400">Déjalo vacío si aún no se ha asignado.</p>
+          <input className={inputClass} value={equipo} onChange={(e) => setEquipo(e.target.value.toLowerCase())} />
         </label>
         <label className={labelClass}>
           Banco o casino a abrir
@@ -246,7 +265,8 @@ export function AperturasPanel() {
                 <tr>
                   <th className="px-3 py-2">Cliente</th>
                   <th className="px-3 py-2">Teléfono</th>
-                  <th className="px-3 py-2">Letra</th>
+                  <th className="px-3 py-2">Referido por</th>
+                  <th className="px-3 py-2">Equipo</th>
                   <th className="px-3 py-2">Banco/Casino</th>
                   <th className="px-3 py-2">Cita</th>
                   <th className="px-3 py-2">Responsable</th>
@@ -259,7 +279,18 @@ export function AperturasPanel() {
                   <tr key={f.id}>
                     <td className="px-3 py-2">{f.cliente ?? f.nombreCliente}</td>
                     <td className="px-3 py-2">{f.telefono ?? "—"}</td>
-                    <td className="px-3 py-2">{f.letra ?? "—"}</td>
+                    <td className="px-3 py-2">{f.referidoPor ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      {f.equipo ? (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                          Asignado ({f.equipo})
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+                          Sin asignar
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2">{f.bancoOCasino}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{fechaHora(f.fechaCita)}</td>
                     <td className="px-3 py-2">{f.responsable ?? "—"}</td>
@@ -294,7 +325,7 @@ export function AperturasPanel() {
                 ))}
                 {visibles.length === 0 && (
                   <tr>
-                    <td className="px-3 py-3 text-slate-400" colSpan={8}>
+                    <td className="px-3 py-3 text-slate-400" colSpan={9}>
                       Sin aperturas con este filtro.
                     </td>
                   </tr>

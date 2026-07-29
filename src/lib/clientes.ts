@@ -224,6 +224,12 @@ async function siguienteIdCliente() {
   return `CL${String(n + 1).padStart(4, "0")}`;
 }
 
+/** Previsualiza el ID que le tocaría al próximo cliente, sin crearlo (referencia en Próx. Apertura). ADMIN o GESTOR. */
+export async function previsualizarSiguienteIdCliente(actor: Actor) {
+  assertGestion(actor);
+  return siguienteIdCliente();
+}
+
 const ClienteSchema = z.object({
   status: z.string().optional(),
   nombreCompleto: z.string().min(1),

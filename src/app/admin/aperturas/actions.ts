@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { type Actor, ForbiddenError } from "@/lib/authz";
 import { crearApertura, listAperturas, actualizarApertura } from "@/lib/aperturas";
-import { buscarClientes } from "@/lib/clientes";
+import { buscarClientes, previsualizarSiguienteIdCliente } from "@/lib/clientes";
 import { listUsuariosActivos } from "@/lib/usuarios";
 
 async function gestionOrThrow(): Promise<Actor> {
@@ -19,7 +19,8 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 export type AperturaInput = {
   nombreCliente: string;
   telefono?: string;
-  letra?: string;
+  equipo?: string;
+  referidoPor?: string;
   clienteId?: string;
   bancoOCasino: string;
   fechaCita: string;
@@ -34,7 +35,8 @@ export async function accionListAperturas() {
     id: f.id,
     nombreCliente: f.nombreCliente,
     telefono: f.telefono,
-    letra: f.letra,
+    equipo: f.equipo,
+    referidoPor: f.referidoPor,
     bancoOCasino: f.bancoOCasino,
     fechaCita: f.fechaCita.toISOString(),
     estado: f.estado,
@@ -42,6 +44,11 @@ export async function accionListAperturas() {
     cliente: f.cliente?.nombreCompleto ?? null,
     responsable: f.responsable?.nombre ?? null,
   }));
+}
+
+export async function accionPrevisualizarSiguienteIdCliente() {
+  const actor = await gestionOrThrow();
+  return previsualizarSiguienteIdCliente(actor);
 }
 
 export async function accionCrearApertura(input: AperturaInput): Promise<ActionResult> {
