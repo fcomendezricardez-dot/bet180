@@ -17,10 +17,11 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) return null;
   const actor = { rol: session.user.rol, letra: session.user.letra };
-  const esAdmin = actor.rol === "ADMIN";
+  // ADMIN y GESTOR ven todas las letras (ninguno tiene letra asignada); solo OPERADOR se filtra a la suya.
+  const veTodasLasLetras = actor.rol === "ADMIN" || actor.rol === "GESTOR";
 
-  const cuentaWhere = esAdmin ? {} : { letra: actor.letra! };
-  const casinoWhere = esAdmin ? {} : { letra: actor.letra! };
+  const cuentaWhere = veTodasLasLetras ? {} : { letra: actor.letra! };
+  const casinoWhere = veTodasLasLetras ? {} : { letra: actor.letra! };
 
   const [cuentas, casinos, saldosCuentas, saldosCasinos, pendientes] = await Promise.all([
     prisma.cuenta.findMany({ where: cuentaWhere, orderBy: [{ letra: "asc" }, { perfil: "asc" }] }),
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
     calcularSaldosCuentas(cuentaWhere),
     calcularSaldosCasinos(casinoWhere),
     prisma.movimiento.findMany({
-      where: { estado: "PENDIENTE", cuenta: esAdmin ? undefined : { letra: actor.letra! } },
+      where: { estado: "PENDIENTE", cuenta: veTodasLasLetras ? undefined : { letra: actor.letra! } },
       include: { cuenta: { select: { letra: true, perfil: true, banco: true, nombreCliente: true } } },
       orderBy: { fecha: "desc" },
     }),
@@ -37,7 +38,9 @@ export default async function DashboardPage() {
   const totalCuentas = sum(saldosCuentas.values());
   const totalCasinos = sum(saldosCasinos.values());
 
-  const letras = esAdmin ? [...new Set(cuentas.map((c) => c.letra).concat(casinos.map((c) => c.letra)))].sort() : [];
+  const letras = veTodasLasLetras
+    ? [...new Set(cuentas.map((c) => c.letra).concat(casinos.map((c) => c.letra)))].sort()
+    : [];
   const consolidadoPorLetra = letras.map((letra) => {
     const cuentasLetra = cuentas.filter((c) => c.letra === letra);
     const casinosLetra = casinos.filter((c) => c.letra === letra);
@@ -55,7 +58,7 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
         <p className="mt-1 text-sm text-slate-500">
-          {esAdmin ? "Vista consolidada de todas las letras." : `Tus cuentas y casinos — Letra ${actor.letra}.`}
+          {veTodasLasLetras ? "Vista consolidada de todas las letras." : `Tus cuentas y casinos — Letra ${actor.letra}.`}
         </p>
       </div>
 
@@ -91,7 +94,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {esAdmin && (
+      {veTodasLasLetras && (
         <div>
           <h2 className="mb-2 text-lg font-semibold text-slate-900">Consolidado por letra</h2>
           <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
