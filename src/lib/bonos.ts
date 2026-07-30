@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Actor, assertAdmin, assertGestion, assertLetraAccess } from "@/lib/authz";
+import { type Actor, assertGestion, assertLetraAccess } from "@/lib/authz";
 import { clientePorLetraPerfil } from "@/lib/clientes";
 import { prisma } from "@/lib/prisma";
 
@@ -121,12 +121,16 @@ function calcularDisponibilidad(
   };
 }
 
-/** Reglas activas con su status de disponibilidad ahora mismo, para Punto de Atención. Solo ADMIN. */
+/**
+ * Reglas activas con su status de disponibilidad ahora mismo. ADMIN y GESTOR
+ * ven todas las letras; OPERADOR solo la suya.
+ */
 export async function bonosDisponibles(actor: Actor) {
-  assertAdmin(actor);
-
   const reglas = await prisma.reglaBono.findMany({
-    where: { activo: true },
+    where: {
+      activo: true,
+      casino: actor.rol === "OPERADOR" ? { letra: actor.letra! } : undefined,
+    },
     include: {
       casino: { select: { id: true, nombreCasino: true, letra: true, perfil: true } },
       tiers: { orderBy: { depositoMin: "asc" } },
@@ -266,12 +270,17 @@ export async function reclamosPendientesDeCasino(actor: Actor, casinoId: string)
   );
 }
 
-/** Todos los reclamos con rollover pendiente, para la pantalla Bonos. Solo ADMIN. */
+/**
+ * Todos los reclamos con rollover pendiente, para la pantalla Bonos. ADMIN y
+ * GESTOR ven todas las letras; OPERADOR solo la suya.
+ */
 export async function reclamosConRolloverPendiente(actor: Actor) {
-  assertAdmin(actor);
-
   const reclamos = await prisma.bonoReclamo.findMany({
-    where: { rolloverRequerido: { not: null }, rolloverLiberado: false },
+    where: {
+      rolloverRequerido: { not: null },
+      rolloverLiberado: false,
+      regla: actor.rol === "OPERADOR" ? { casino: { letra: actor.letra! } } : undefined,
+    },
     include: {
       regla: { select: { nombre: true, casino: { select: { id: true, nombreCasino: true, letra: true, perfil: true } } } },
     },

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Actor, assertAdmin, assertGestion } from "@/lib/authz";
+import { type Actor, assertAdmin, assertGestion, ForbiddenError } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { calcularSaldoCasino, calcularSaldoCuenta } from "@/lib/saldos";
 
@@ -58,28 +58,47 @@ export async function arqueoCliente(actor: Actor, clienteId: string) {
   return { cliente: { id: cliente.id, nombreCompleto: cliente.nombreCompleto }, bancos };
 }
 
-/** Busca clientes por nombre o ID (catálogo completo, ADMIN o GESTOR). */
+/**
+ * Busca clientes por nombre o ID (catálogo completo). ADMIN y GESTOR ven
+ * todas las letras; OPERADOR solo ve los clientes de su propia letra.
+ */
 export async function buscarClientes(actor: Actor, query: string) {
-  assertGestion(actor);
   if (!query.trim()) return [];
 
-  return prisma.cliente.findMany({
+  const clientes = await prisma.cliente.findMany({
     where: {
       OR: [
         { nombreCompleto: { contains: query.trim(), mode: "insensitive" } },
         { id: { contains: query.trim(), mode: "insensitive" } },
       ],
     },
-    select: { id: true, nombreCompleto: true, status: true, equipo: true },
+    select: {
+      id: true,
+      nombreCompleto: true,
+      status: true,
+      equipo: true,
+      cuentas: { select: { letra: true }, take: 1 },
+    },
     orderBy: { nombreCompleto: "asc" },
     take: 20,
   });
+
+  const resultado = clientes.map((c) => {
+    const letra = parsearEquipo(c.equipo)?.letra ?? c.cuentas[0]?.letra ?? null;
+    return { id: c.id, nombreCompleto: c.nombreCompleto, status: c.status, equipo: c.equipo, letra };
+  });
+
+  if (actor.rol === "OPERADOR") {
+    return resultado.filter((c) => c.letra === actor.letra);
+  }
+  return resultado;
 }
 
-/** Ficha completa de un cliente: datos personales + sus cuentas y casinos. */
+/**
+ * Ficha completa de un cliente: datos personales + sus cuentas y casinos.
+ * OPERADOR solo puede ver clientes de su propia letra.
+ */
 export async function obtenerFichaCliente(actor: Actor, id: string) {
-  assertGestion(actor);
-
   const cliente = await prisma.cliente.findUniqueOrThrow({
     where: { id },
     include: { cuentas: true },
@@ -88,6 +107,10 @@ export async function obtenerFichaCliente(actor: Actor, id: string) {
   const letraPerfil =
     parsearEquipo(cliente.equipo) ??
     (cliente.cuentas[0] ? { letra: cliente.cuentas[0].letra, perfil: cliente.cuentas[0].perfil } : null);
+
+  if (actor.rol === "OPERADOR" && letraPerfil?.letra !== actor.letra) {
+    throw new ForbiddenError();
+  }
 
   const casinos = letraPerfil
     ? await prisma.casino.findMany({

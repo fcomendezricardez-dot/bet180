@@ -6,9 +6,27 @@ const OPERATOR_LINKS = [
   { href: "/movimientos/nuevo", label: "Nuevo Movimiento" },
   { href: "/apuestas", label: "Apuestas Colocadas" },
   { href: "/apuestas/cerrar", label: "Eventos Activos" },
+  { href: "/admin/reportes", label: "Reportes" },
+  { href: "/admin/clientes", label: "Buscador Clientes" },
+  { href: "/admin/atencion", label: "Punto de Atención" },
+  { href: "/admin/bonos", label: "Bonos" },
+];
+
+const GESTOR_LINKS = [
+  { href: "/admin/alta", label: "Gestión (Alta/Edición)" },
+  { href: "/admin/reportes", label: "Reportes" },
+  { href: "/admin/clientes", label: "Buscador Clientes" },
+  { href: "/admin/atencion", label: "Punto de Atención" },
+  { href: "/admin/seguimiento", label: "Seguimiento" },
+  { href: "/admin/aperturas", label: "Próx. Apertura" },
+  { href: "/admin/agenda", label: "Agenda" },
 ];
 
 const ADMIN_LINKS = [
+  { href: "/", label: "Dashboard" },
+  { href: "/movimientos/nuevo", label: "Nuevo Movimiento" },
+  { href: "/apuestas", label: "Apuestas Colocadas" },
+  { href: "/apuestas/cerrar", label: "Eventos Activos" },
   { href: "/admin/alta", label: "Gestión (Alta/Edición)" },
   { href: "/admin/status", label: "Editar Status" },
   { href: "/admin/reportes", label: "Reportes" },
@@ -22,22 +40,13 @@ const ADMIN_LINKS = [
   { href: "/admin/usuarios", label: "Usuarios" },
 ];
 
-const GESTOR_LINKS = [
-  { href: "/admin/alta", label: "Gestión (Alta/Edición)" },
-  { href: "/admin/clientes", label: "Buscador Clientes" },
-  { href: "/admin/atencion", label: "Punto de Atención" },
-  { href: "/admin/seguimiento", label: "Seguimiento" },
-  { href: "/admin/aperturas", label: "Próx. Apertura" },
-  { href: "/admin/agenda", label: "Agenda" },
-];
-
 export async function Nav() {
   const session = await auth();
   if (!session?.user) return null;
 
   const links =
     session.user.rol === "ADMIN"
-      ? [...OPERATOR_LINKS, ...ADMIN_LINKS]
+      ? ADMIN_LINKS
       : session.user.rol === "GESTOR"
         ? GESTOR_LINKS
         : OPERATOR_LINKS;

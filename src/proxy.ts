@@ -3,8 +3,22 @@ import { auth } from "@/auth";
 
 const PUBLIC_PATHS = ["/login"];
 
-/** Subrutas de /admin exclusivas de ADMIN (no accesibles para GESTOR). */
-const ADMIN_ONLY_PATHS = ["/admin/status", "/admin/reportes", "/admin/arqueo", "/admin/bonos", "/admin/usuarios"];
+type Rol = "ADMIN" | "OPERADOR" | "GESTOR";
+
+/** Roles permitidos por cada subruta de /admin; ADMIN siempre tiene acceso a todo. */
+const ADMIN_PATH_ROLES: [string, Rol[]][] = [
+  ["/admin/status", []],
+  ["/admin/arqueo", []],
+  ["/admin/usuarios", []],
+  ["/admin/alta", ["GESTOR"]],
+  ["/admin/seguimiento", ["GESTOR"]],
+  ["/admin/aperturas", ["GESTOR"]],
+  ["/admin/agenda", ["GESTOR"]],
+  ["/admin/reportes", ["GESTOR", "OPERADOR"]],
+  ["/admin/clientes", ["GESTOR", "OPERADOR"]],
+  ["/admin/atencion", ["GESTOR", "OPERADOR"]],
+  ["/admin/bonos", ["OPERADOR"]],
+];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
@@ -24,11 +38,13 @@ export default auth((req) => {
   }
 
   if (pathname.startsWith("/admin")) {
-    const rol = req.auth.user.rol;
-    const esAdminOnly = ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p));
-    const permitido = rol === "ADMIN" || (rol === "GESTOR" && !esAdminOnly);
-    if (!permitido) {
-      return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+    const rol = req.auth.user.rol as Rol;
+    if (rol !== "ADMIN") {
+      const entry = ADMIN_PATH_ROLES.find(([p]) => pathname.startsWith(p));
+      const permitido = entry ? entry[1].includes(rol) : false;
+      if (!permitido) {
+        return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+      }
     }
   }
 

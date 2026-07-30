@@ -1,9 +1,18 @@
+import { auth } from "@/auth";
 import { clientesPorLetraPerfil } from "@/lib/clientes";
 import { etiquetaCorta, formatMoney } from "@/lib/format";
 import { flujoDeMovimientos, gananciaPorCasino } from "@/lib/reportes";
 
 export default async function ReportesPage() {
-  const [flujo, ganancia] = await Promise.all([flujoDeMovimientos(), gananciaPorCasino()]);
+  const session = await auth();
+  if (!session?.user) return null;
+  const actor = { rol: session.user.rol, letra: session.user.letra };
+  const letraFiltro = actor.rol === "OPERADOR" ? actor.letra! : undefined;
+
+  const [flujo, ganancia] = await Promise.all([
+    flujoDeMovimientos({ letra: letraFiltro }),
+    gananciaPorCasino({ letra: letraFiltro }),
+  ]);
   const clientes = await clientesPorLetraPerfil(ganancia.filas.map((f) => ({ letra: f.letra, perfil: f.perfil })));
 
   return (

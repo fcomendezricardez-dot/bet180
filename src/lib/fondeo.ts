@@ -29,13 +29,13 @@ export async function registrarSnapshotDiario() {
  * diarias acumuladas) está por debajo del mínimo — riesgo de comisión por
  * fondeo bajo. Solo cuenta cuentas con al menos una foto registrada este mes.
  */
-export async function calcularFondeoCuentas(minimo = 5000) {
+export async function calcularFondeoCuentas(minimo = 5000, letra?: string) {
   const inicioMes = new Date();
   inicioMes.setUTCDate(1);
   inicioMes.setUTCHours(0, 0, 0, 0);
 
   const cuentas = await prisma.cuenta.findMany({
-    where: { status: "ACTIVA" },
+    where: { status: "ACTIVA", letra },
     select: { id: true, banco: true, letra: true, perfil: true, nombreCliente: true },
   });
 

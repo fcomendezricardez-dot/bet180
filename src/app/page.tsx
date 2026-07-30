@@ -196,20 +196,22 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex gap-3">
-        <Link
-          href="/movimientos/nuevo"
-          className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          Nuevo Movimiento
-        </Link>
-        <Link
-          href="/apuestas/cerrar"
-          className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          Cerrar Apuesta
-        </Link>
-      </div>
+      {actor.rol !== "GESTOR" && (
+        <div className="flex gap-3">
+          <Link
+            href="/movimientos/nuevo"
+            className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Nuevo Movimiento
+          </Link>
+          <Link
+            href="/apuestas/cerrar"
+            className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Cerrar Apuesta
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
