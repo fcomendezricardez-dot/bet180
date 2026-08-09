@@ -38,6 +38,7 @@ const ADMIN_LINKS = [
   { href: "/admin/aperturas", label: "Próx. Apertura" },
   { href: "/admin/agenda", label: "Agenda" },
   { href: "/admin/usuarios", label: "Usuarios" },
+  { href: "/admin/importar", label: "Importar Excel" },
 ];
 
 export async function Nav() {
